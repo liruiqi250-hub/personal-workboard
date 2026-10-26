@@ -1,8 +1,8 @@
-# Codex 安装与维护约定 V1.1.0
+# Codex 安装与维护约定 V1.3.0
 
-目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。v0.3.1 为开发预览，按实际发行页的指定版本与校验值试装；正式签名更新及最终业务验收尚未完成。本文件不授权发布。
+目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2 本次按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。本文件不授权发布。
 
-当前软件为 V0.3.1 开发预览。离线协议与部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
+当前软件为 V0.3.2 开发预览。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
 
 所有用户沟通使用中文。软件每次变更都递增版本号，更新 CHANGELOG，保留可回退的上一程序及对应数据快照。UI 改动优先使用已安装的 Impeccable 技能，复用现有 Ant Design 组件，运行实际页面并检查中文、布局、溢出、主要状态与 Impeccable 检测结果。
 
@@ -37,11 +37,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose.ps1
 
 先读 `docs/RELEASE_FOR_CODEX.md`。只接受已核验 ZIP 或真实 GitHub 仓库的发行资产，`ExpectedSha256` 必填。没有正式仓库地址时不得编造远端、发行链接或宣称已发布。`scripts/update.ps1` 在覆盖前保留独立数据快照与 `.workboard-previous` 中的上一程序。`scripts/rollback.ps1` 只能恢复带 `update-metadata.json` 的指定上一版本，数据库与凭据恢复到匹配快照，回退前数据和报告文件均保留。
 
+V0.3.2 默认 `sourceMode=project-default`，使用 `public/update-trust.json` 里的本项目仓库、公钥和指纹；员工启动不生成维护者密钥。旧设置中明确的自定义仓库/公钥必须保留；旧自定义配置无效时显示配置错误，不能静默抹除或替换。正式通道 `stable` 只接受非草稿、非 Pre-release 的正式发行；`preview` 必须明确固定 `v主.次.修订` 标签。普通主服务只能验签下载预览，不能安装；同版和旧版只能验证，不能降级。
+
+预览安装仅用于明确的隔离测试：`start.ps1 -PreviewUpdateTest` 加项目外独立绝对 `-DataDir`、非默认数据目录、非 `18327` 端口，检查 `/health` 与 `service.json` 的 `previewUpdateTest:true`。普通启动必须保持 false，不能用继承环境变量绕过隔离。安装使用持久一次性票据，改来源/通道/公钥后重新检查；已消费或重启中断的票据先人工核对，不自动重放。安装入口向更新脚本传递已验签的 `ExpectedVersion`，在停服前核对包内版本。
+
+维护者签名只使用显式 `node scripts/sign-update.cjs init/public/sign`。默认私钥封套在项目外 `%LOCALAPPDATA%\PersonalWorkboardPublisher\liruiqi250-hub\personal-workboard`，受当前 Windows 用户 DPAPI 保护；禁止把封套、明文私钥或凭据纳入源码、部署包、日志或诊断。轮换需经已可信版本带入新公钥，错过过渡版本使用可信安装流程，不从未验证网络内容自动替换信任。发布和资产上传由维护者统一协调。
+
 脚本读写、移动和复制前必须检查绝对路径边界，拒绝路径联接和越界包条目。不能递归删除用户资料，不能为发布而扫描或打包聊天、私人配置和真实数据库。公开包由 `scripts/package.cjs` 显式白名单构建，禁止直接压缩整个工作目录。
 
 发布前检查实际构建、测试、包内清单和独立目录启动；只有实际完成的检查才记为通过。Git 操作、发布和安装账户授权遵从当前用户指令；此文件不授权推送、登录账号或发送消息。
 
-## V0.3.1 来源与遥控维护
+## 来源与遥控维护
 
 先读 `docs/INSTALL_FOR_CODEX.md` 的平台采集配置。不能把 GUI 导出器当成已支持的 CLI；微信仅适配明列的 v1.4.0 源码和依赖哈希，钉钉需要兼容的原生 dws 可执行文件及企业授权。没有本人明确账号、该账号离线解密凭据与稳定会话 ID，不得执行微信平台采集。禁止自动扫描微信进程内存、跨账号和全局 key cache；凭据经 DPAPI 保存，仅在采集时通过 stdin 传固定 helper，不进入 config/SQLite/argv/日志/前端。Bot 扫码只建立私聊通道，不授予工作消息范围。探测只能 version/help/本地 readonly 登录态；微信 helper 的 check 不打开数据库。
 

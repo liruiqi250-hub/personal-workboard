@@ -5,7 +5,8 @@ param(
     [Parameter(Mandatory = $true, ParameterSetName = 'GitHub')][string]$Tag,
     [Parameter(Mandatory = $true, ParameterSetName = 'GitHub')][string]$AssetName,
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-fA-F0-9]{64}$')][string]$ExpectedSha256,
-    [string]$DataDir, [int]$Port = 18327, [switch]$NoStart
+    [string]$DataDir, [int]$Port = 18327, [switch]$NoStart,
+    [ValidatePattern('^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')][string]$ExpectedVersion
 )
 . (Join-Path $PSScriptRoot 'common.ps1')
 $context = Get-BoardContext $DataDir $Port
@@ -39,6 +40,7 @@ if ($LASTEXITCODE -ne 0) { throw '更新包清单验证失败；没有停止服�
 if (-not (Test-Path -LiteralPath (Join-Path $incoming 'node_modules')) -or -not (Test-Path -LiteralPath (Join-Path $incoming 'dist/index.html'))) { throw '自动更新要求含生产依赖与已构建界面的部署包；源码包请先构建。' }
 $newPackage = Get-Content -LiteralPath (Join-Path $incoming 'package.json') -Raw | ConvertFrom-Json
 $oldPackage = Get-Content -LiteralPath (Join-Path $context.Root 'package.json') -Raw | ConvertFrom-Json
+if ($ExpectedVersion -and $newPackage.version -ne $ExpectedVersion) { throw '更新包内部版本与已验签清单不一致；没有停止服务或覆盖程序。' }
 if ([version]($newPackage.version -replace '-.*$', '') -le [version]($oldPackage.version -replace '-.*$', '')) { throw '更新包版本必须高于当前版本；没有覆盖程序。同版请使用 start.ps1，恢复旧版请使用 rollback.ps1。' }
 $null = Get-BoardOwnedHealth $context
 Stop-BoardService $context

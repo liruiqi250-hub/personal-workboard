@@ -39,7 +39,7 @@ export default function App() {
       if (!alive || !next) return;
       if (!next.settings?.onboardingComplete) setWizard(true);
       if (next.settings?.updates?.owner && next.settings?.updates?.repo) {
-        try { const result = await api('update.check'); if (alive) { setUpdateResult(result); if (result?.available || result?.status === 'available') setUpdateOpen(true); } }
+        try { const result = await api('update.check'); if (alive) { setUpdateResult(result); if (result?.available || ['available', 'verification_available'].includes(result?.status)) setUpdateOpen(true); } }
         catch (e) { if (alive) setUpdateResult({ status: 'error', message: e.message }); }
       }
     });
@@ -52,14 +52,25 @@ export default function App() {
   }, [page, wizard, reload]);
   const run = async (method, payload, success, refresh = true) => {
     setBusy(method);
-    try { const result = await api(method, payload); if (result?.canceled || result?.cancelled) return null; if (refresh) await reload(); if (success) message.success(success); return result ?? {}; }
+    try { const result = await api(method, payload); if (result?.canceled || result?.cancelled) return null; if (method === 'settings.save') { setUpdateResult(null); setUpdateOpen(false); } if (refresh) await reload(); if (success) message.success(success); return result ?? {}; }
     catch (e) { message.error({ content: e.message, duration: 7 }); return null; } finally { setBusy(''); }
   };
   const checkUpdates = async () => { const result = await run('update.check', {}, '', false); if (result) { setUpdateResult(result); setUpdateOpen(true); } };
   const props = { data, run, busy, navigate: setPage, modal };
-  const availableUpdate = updateResult?.available || updateResult?.status === 'available';
-  const downloadedUpdate = updateResult?.status === 'downloaded';
+  const availableUpdate = !['downloaded', 'verified_only'].includes(updateResult?.status) && (updateResult?.available || ['available', 'verification_available'].includes(updateResult?.status));
+  const downloadedUpdate = ['downloaded', 'verified_only'].includes(updateResult?.status);
+  const verificationOnly = updateResult?.verificationOnly || ['verification_available', 'verified_only'].includes(updateResult?.status) || (downloadedUpdate && updateResult?.canInstall !== true);
+  const canDownloadUpdate = availableUpdate && updateResult?.canDownload !== false;
+  const canInstallUpdate = downloadedUpdate && updateResult?.canInstall === true;
   const updateUnconfigured = !data.settings.updates?.owner || !data.settings.updates?.repo || !data.settings.updates?.publicKey || updateResult?.status === 'unconfigured';
+  const updateChannel = updateResult?.channel || data.settings.updates?.channel || 'stable';
+  const updateFailed = updateResult?.status === 'error';
+  const updateMessage = updateResult?.message || updateResult?.reason;
+  const requestInstall = result => {
+    if (result?.status !== 'downloaded' || result?.canInstall !== true) return;
+    modal.confirm({ title: updateChannel === 'preview' ? '安装已验证的预览测试版？' : '安装已验证的更新？', content: '安装前会再次核对下载文件，并保留上一程序和对应数据快照。安装期间本机服务会重启，请先保存正在编辑的内容。', okText: '备份并安装更新', cancelText: '稍后', onOk: async () => { const prepared = await run('update.install', {}, ''); if (prepared) { setUpdateResult(prepared); modal.info({ title: '本机更新结果', content: prepared.message || '请核对本机服务返回的更新状态。', okText: '知道了' }); } } });
+  };
+  const downloadUpdate = async () => { if (!canDownloadUpdate) return; const result = await run('update.download', {}, ''); if (result) { setUpdateResult(result); if (result.canInstall === true) requestInstall(result); } };
   const configuredCount = data.sources.filter(s => s.enabled && s.status === 'connected').length;
   const date = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
   return <Layout className="app-shell">
@@ -83,8 +94,11 @@ export default function App() {
       </main><footer className="app-footer"><span>个人待办事项看板 V{data.version}</span><span>任务依据可追溯 · 完成状态由你确认</span></footer>
     </Layout>
     <Onboarding open={wizard} onClose={() => setWizard(false)} {...props} />
-    <Modal open={updateOpen} title="软件更新" onCancel={() => setUpdateOpen(false)} footer={<Space><Button onClick={() => setUpdateOpen(false)}>稍后</Button>{availableUpdate && <Button type="primary" loading={busy.startsWith('update.')} onClick={async () => { const r = await run('update.download', {}, ''); if (r) { setUpdateResult(r); modal.confirm({ title: '准备本机更新？', content: '下载文件已返回，下一步先备份本机数据，再显示实际更新结果。请按本机服务返回的说明完成替换与重启。', okText: '备份并准备更新', cancelText: '稍后', onOk: async () => { const prepared = await run('update.install', {}, ''); if (prepared) { setUpdateResult(prepared); modal.info({ title: '本机更新准备结果', content: prepared.message || '请核对本机服务返回的更新状态。', okText: '知道了' }); } } }); } }}>下载更新</Button>}</Space>}>
-      <Result status={availableUpdate ? 'info' : updateUnconfigured ? 'warning' : downloadedUpdate ? 'info' : 'success'} title={availableUpdate ? `发现新版本 ${updateResult?.version || updateResult?.latestVersion || ''}` : downloadedUpdate ? '更新文件已下载并通过验证' : updateUnconfigured ? '更新服务待配置' : '本次检查未发现可用更新'} subTitle={updateResult?.message || updateResult?.reason || (availableUpdate ? '核对版本说明后下载。安装前会验证发布文件。' : '请在“我的设置 → 软件更新”配置正式 GitHub 发布仓库及签名公钥。')} />
+    <Modal open={updateOpen} title="软件更新" onCancel={() => setUpdateOpen(false)} footer={<Space wrap><Button onClick={() => setUpdateOpen(false)}>稍后</Button>{availableUpdate && <Button type="primary" disabled={!canDownloadUpdate} loading={busy.startsWith('update.')} onClick={downloadUpdate}>{verificationOnly ? '仅下载验证' : '下载并验证'}</Button>}{canInstallUpdate && <Button type="primary" loading={busy.startsWith('update.')} onClick={() => requestInstall(updateResult)}>备份并安装更新</Button>}</Space>}>
+      <Space wrap><Tag>当前 V{data.version}</Tag><Tag color={updateChannel === 'preview' ? 'orange' : 'default'}>{updateChannel === 'preview' ? '预览测试通道' : '稳定版通道'}</Tag>{updateChannel === 'preview' && (updateResult?.previewTag || data.settings.updates?.previewTag) && <span className="pre-wrap">标签：{updateResult?.previewTag || data.settings.updates?.previewTag}</span>}</Space>
+      <Result status={updateFailed ? 'error' : updateUnconfigured ? 'warning' : availableUpdate || downloadedUpdate ? 'info' : 'success'} title={updateFailed ? '检查更新失败' : updateUnconfigured ? '更新来源尚未就绪' : availableUpdate ? `${verificationOnly ? '可验证预览版本' : '发现新版本'} ${updateResult?.version || updateResult?.latestVersion || ''}` : downloadedUpdate ? verificationOnly ? '更新文件已验证，仅供核验' : '更新文件已下载并通过验证' : '本次检查未发现可用更新'} subTitle={updateMessage || (updateUnconfigured ? '请在“我的设置 → 软件更新”选择项目默认来源，或由维护人员配置已核对的自定义来源。' : availableUpdate ? '核对版本说明后下载，签名和文件校验通过后才会开放安装。' : '当前通道没有可安装的新版本。')} />
+      {availableUpdate && !canDownloadUpdate && <Alert type="warning" showIcon title="此版本暂不能下载" description={updateMessage || '发布文件或可信签名尚未就绪，请维护人员核对发布资产后重新检查。'} />}
+      {downloadedUpdate && !canInstallUpdate && <Alert type="info" showIcon title="本次验证不会安装更新" description={updateMessage || '较旧或相同版本预览仅供验签下载；安装较新预览版还需独立的预览测试启动模式。'} />}
       {updateResult?.notes && <div className="pre-wrap">{updateResult.notes}</div>}
     </Modal>
   </Layout>;

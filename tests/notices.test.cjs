@@ -153,8 +153,8 @@ function sourcePackage(t) {
   const names = [
     'package.json', 'package-lock.json', 'README.md', 'AGENTS.md', 'CHANGELOG.md', 'dist/index.html', 'dist/client.js',
     'docs/INSTALL_FOR_CODEX.md', 'docs/RELEASE_FOR_CODEX.md',
-    ...['main', 'store', 'vault', 'extract', 'sources', 'updates', 'wechat', 'codex', 'reports', 'managed-codex-store', 'outbound', 'collectors', 'wechat-export-runner'].map(name => 'server/' + name + '.cjs'),
-    ...['common.ps1', 'deploy.ps1', 'start.ps1', 'stop.ps1', 'diagnose.ps1', 'update.ps1', 'rollback.ps1', 'validate-package.cjs', 'package-policy.cjs', 'frontend-notices.cjs', '启动看板.cmd', '停止看板.cmd'].map(name => 'scripts/' + name)
+    ...['main', 'store', 'vault', 'extract', 'sources', 'updates', 'wechat', 'codex', 'reports', 'managed-codex-store', 'outbound', 'collectors', 'wechat-export-runner','update-protocol','update-trust','publisher-keys'].map(name => 'server/' + name + '.cjs'),
+    ...['common.ps1', 'deploy.ps1', 'start.ps1', 'stop.ps1', 'diagnose.ps1', 'update.ps1', 'rollback.ps1', 'validate-package.cjs', 'package-policy.cjs', 'frontend-notices.cjs','sign-update.cjs', '启动看板.cmd', '停止看板.cmd'].map(name => 'scripts/' + name)
   ];
   for (const name of names) {
     const file = path.join(f.root, name);
@@ -162,6 +162,7 @@ function sourcePackage(t) {
     fs.writeFileSync(file, name === 'package.json' ? JSON.stringify({ name: 'personal-workboard', version: '0.3.1', dependencies: {} }) : name === 'dist/index.html' ? '<!doctype html><html lang="zh-CN"><title>许可验证夹具</title></html>' : 'isolated test fixture');
   }
   notices.writeNotices(path.join(f.root, 'dist'), notices.createNotices(f.root, f.packages));
+  for(const directory of ['public','dist'])fs.copyFileSync(path.resolve(__dirname,'../public/update-trust.json'),path.join(f.root,directory,'update-trust.json'));
   function releaseManifest() {
     const entries = [];
     function walk(directory) {

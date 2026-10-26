@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "owner": "liruiqi250-hub",
+  "repo": "personal-workboard",
+  "algorithm": "Ed25519",
+  "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAaj4creLeDYXEfRQJZgG+eQ/kN17xymJ5L7Os6js1Aq0=\n-----END PUBLIC KEY-----\n",
+  "keyId": "65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd",
+  "fingerprint": "SHA256:65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd",
+  "defaultChannel": "stable",
+  "rotationPolicy": "随已可信版本带入新公钥；不从网络自动信任新key；错过过渡版本需可信安装流程",
+  "retiredKeyIds": []
+}

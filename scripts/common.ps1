@@ -56,6 +56,7 @@ function Exit-BoardMaintenance {
     }
 }
 function Get-BoardContext([string]$DataDir, [int]$Port = 18327, [switch]$AllowMissingProgram) {
+    $dataDirExplicit = -not [string]::IsNullOrWhiteSpace($DataDir)
     if ($Port -lt 1024 -or $Port -gt 65535) { throw '端口必须在 1024 至 65535 之间。' }
     if (-not $AllowMissingProgram -and -not (Test-Path -LiteralPath (Join-Path $script:BoardRoot 'server/main.cjs'))) { throw '请把 scripts 文件夹与程序一起解压后运行。' }
     if (-not $DataDir) {
@@ -71,7 +72,7 @@ function Get-BoardContext([string]$DataDir, [int]$Port = 18327, [switch]$AllowMi
     if (Test-Path -LiteralPath $data) {
         if ((Get-Item -LiteralPath $data).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw '数据目录不能是链接或联接。' }
     }
-    [pscustomobject]@{ Root = $script:BoardRoot; DataDir = $data; Port = $Port; Url = "http://127.0.0.1:$Port" }
+    [pscustomobject]@{ Root = $script:BoardRoot; DataDir = $data; Port = $Port; Url = "http://127.0.0.1:$Port"; DataDirExplicit = $dataDirExplicit; PreviewUpdateTest = $false }
 }
 function Get-BoardHealth($Context) {
     try { return Invoke-RestMethod -Uri ($Context.Url + '/health') -TimeoutSec 3 -Method Get } catch { return $null }
@@ -79,6 +80,11 @@ function Get-BoardHealth($Context) {
 function Get-BoardProperty($Object, [string]$Name) {
     if ($null -ne $Object -and $Object.PSObject.Properties.Name -contains $Name) { return $Object.$Name }
     return $null
+}
+function Assert-BoardPreviewTestContext($Context) {
+    if ((Get-BoardProperty $Context 'DataDirExplicit') -ne $true) { throw '预览更新测试必须通过 -DataDir 显式指定独立数据目录。' }
+    if ($Context.Port -eq 18327) { throw '预览更新测试不能使用默认端口 18327，请通过 -Port 指定独立测试端口。' }
+    if ($env:LOCALAPPDATA -and (Resolve-BoardPath $Context.DataDir).Equals((Resolve-BoardPath (Join-Path $env:LOCALAPPDATA 'PersonalWorkboard')), [StringComparison]::OrdinalIgnoreCase)) { throw '预览更新测试不能使用默认 PersonalWorkboard 数据目录。' }
 }
 function Get-BoardOwnedHealth($Context) {
     $health = Get-BoardHealth $Context
@@ -91,6 +97,10 @@ function Get-BoardOwnedHealth($Context) {
     if ($hi -or $mi) {
         if (-not $hi -or -not $mi -or $hi -ne $mi) { throw '服务实例标识不匹配；不会操作这个服务。' }
     } elseif ((Get-BoardProperty $health 'startedAt') -ne (Get-BoardProperty $meta 'startedAt')) { throw '服务启动时间不匹配；不会操作这个服务。' }
+    $healthPreview = Get-BoardProperty $health 'previewUpdateTest'; $metaPreview = Get-BoardProperty $meta 'previewUpdateTest'
+    if (($null -ne $healthPreview -and $healthPreview -isnot [bool]) -or ($null -ne $metaPreview -and $metaPreview -isnot [bool]) -or [bool]$healthPreview -ne [bool]$metaPreview) { throw '服务预览测试模式与本数据目录记录不匹配；不会操作这个服务。' }
+    if ($healthPreview) { Assert-BoardPreviewTestContext $Context }
+    $Context | Add-Member -NotePropertyName PreviewUpdateTest -NotePropertyValue ([bool]$healthPreview) -Force
     return $health
 }
 function Test-BoardPort([int]$Port) {
@@ -168,12 +178,20 @@ function Open-BoardBrowser([string]$Url) {
     # 通过 Windows 默认外部浏览器打开；不使用 Codex 内置浏览器。
     Start-Process -FilePath $Url
 }
-function Start-BoardService($Context, [switch]$OpenBrowser) {
+function Start-BoardService {
+    [CmdletBinding()]
+    param($Context, [switch]$OpenBrowser, [switch]$PreviewUpdateTest)
+    $requestedPreview = if ($PSBoundParameters.ContainsKey('PreviewUpdateTest')) { [bool]$PreviewUpdateTest } else { (Get-BoardProperty $Context 'PreviewUpdateTest') -eq $true }
+    if ($requestedPreview) { Assert-BoardPreviewTestContext $Context }
     $acquiredMaintenance = -not $script:BoardMaintenanceHeld
     if ($acquiredMaintenance) { Enter-BoardMaintenance $Context }
     try {
     $owned = Get-BoardOwnedHealth $Context
-    if ($owned) { Write-Host "复用正在运行的 V$($owned.version)：$($Context.Url)"; if ($OpenBrowser) { Open-BoardBrowser $Context.Url }; return }
+    if ($owned) {
+        if ([bool](Get-BoardProperty $owned 'previewUpdateTest') -ne $requestedPreview) { throw '正在运行的服务与本次请求的预览测试模式不同；请先使用相同目录和端口安全停服，再明确选择启动模式。' }
+        Write-Host "复用正在运行的 V$($owned.version)：$($Context.Url)"; if ($OpenBrowser) { Open-BoardBrowser $Context.Url }; return
+    }
+    $Context | Add-Member -NotePropertyName PreviewUpdateTest -NotePropertyValue $requestedPreview -Force
     if (Test-BoardPort $Context.Port) { throw "端口 $($Context.Port) 已被占用。请运行 diagnose.ps1，或对 deploy/start/stop 使用同一个 -Port。" }
     $metaPath = Join-Path $Context.DataDir 'service.json'
     if (Test-Path -LiteralPath $metaPath) {
@@ -185,17 +203,21 @@ function Start-BoardService($Context, [switch]$OpenBrowser) {
     New-Item -ItemType Directory -Path $Context.DataDir -Force | Out-Null
     $logs = Join-Path $Context.DataDir 'logs'; $null = Assert-BoardTarget $logs $Context.DataDir
     New-Item -ItemType Directory -Path $logs -Force | Out-Null
-    $oldPort = $env:BOARD_PORT; $oldData = $env:BOARD_DATA_DIR
+    $oldPort = $env:BOARD_PORT; $oldData = $env:BOARD_DATA_DIR; $oldPreview = $env:BOARD_PREVIEW_UPDATE_TEST
     try {
         $env:BOARD_PORT = [string]$Context.Port; $env:BOARD_DATA_DIR = $Context.DataDir
+        $env:BOARD_PREVIEW_UPDATE_TEST = if ($requestedPreview) { '1' } else { $null }
         $process = Start-Process -FilePath $node -ArgumentList '"server/main.cjs"' -WorkingDirectory $Context.Root -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logs 'service.stdout.log') -RedirectStandardError (Join-Path $logs 'service.stderr.log') -PassThru
-    } finally { $env:BOARD_PORT = $oldPort; $env:BOARD_DATA_DIR = $oldData }
+    } finally { $env:BOARD_PORT = $oldPort; $env:BOARD_DATA_DIR = $oldData; $env:BOARD_PREVIEW_UPDATE_TEST = $oldPreview }
     for ($i = 0; $i -lt 60; $i++) {
         Start-Sleep -Milliseconds 250
         $process.Refresh()
         if ($process.HasExited) { throw "启动失败，请查看 $logs\service.stderr.log 或运行 diagnose.ps1。" }
         $health = Get-BoardOwnedHealth $Context
-        if ($health) { Write-Host "已启动 V$($health.version)：$($Context.Url)"; Write-Host "独立数据目录：$($Context.DataDir)"; if ($OpenBrowser) { Open-BoardBrowser $Context.Url }; return }
+        if ($health) {
+            if ([bool](Get-BoardProperty $health 'previewUpdateTest') -ne $requestedPreview) { throw '启动回执的预览测试模式与请求不同，请运行诊断核对服务。' }
+            Write-Host "已启动 V$($health.version)：$($Context.Url)"; Write-Host "独立数据目录：$($Context.DataDir)"; if ($OpenBrowser) { Open-BoardBrowser $Context.Url }; return
+        }
     }
     throw '15 秒内未取得健康回执，请运行 diagnose.ps1。后台进程不会被盲目结束。'
     } finally {

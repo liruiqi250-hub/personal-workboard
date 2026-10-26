@@ -1,12 +1,12 @@
-# 交给 Codex 的本机安装说明 V1.1.0
+# 交给 Codex 的本机安装说明 V1.3.0
 
-当前为 V0.3.1 开发预览；离线测试与本机部署不代表真实渠道接入通过。
+当前软件为 V0.3.2 开发预览，Pre-release、非正式 latest。离线测试、签名验证和部署不代表真实渠道或真人界面验收通过。
 
-目标：在使用者自己的 Windows x64 电脑上运行个人待办事项看板 V0.3.1。每人一个独立数据目录，打开浏览器使用。本文不要求 Docker、Electron、公网域名或云服务器。
+目标：在使用者自己的 Windows x64 电脑上运行个人待办事项看板。每人一个独立数据目录，打开浏览器使用。本文不要求 Docker、Electron、公网域名或云服务器。公开试装明确选择 v0.3.2 预览发行页及对应校验值，旧 v0.3.1 保留，不以候选文件名猜测其他发行版本。
 
 ## 先确认下载材料
 
-目标公开仓库为 https://github.com/liruiqi250-hub/personal-workboard ，owner=liruiqi250-hub，repo=personal-workboard。v0.3.1 为开发预览，可按实际发行页的明确版本试装；正式签名更新及最终业务验收尚未完成。先核对实际发布状态、已验版本、部署 ZIP 与对应 SHA-256，再下载；不能把仓库存在视为发行验收已通过，也不能将 GitHub 源码 ZIP 当作包含运行依赖的部署 ZIP。
+目标公开仓库为 https://github.com/liruiqi250-hub/personal-workboard ，owner=liruiqi250-hub，repo=personal-workboard。[V0.3.2 预览发行页](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2) 提供含 Node 的 `personal-workboard-0.3.2-windows-x64.zip`，SHA-256 为 `455ea75b8f19113348cca122d9fc56205695a90446ebec93bd61bbcbd1634f59`，以及明确清单源码包。先核对实际发行状态、明确版本和对应校验，不能把源码 ZIP 当作包含生产依赖的部署 ZIP，也不能把预览安装解释为整体验收通过。
 
 在下载后、解压前用 `Get-FileHash -Algorithm SHA256` 与可信发行记录比对。`.sha256` 与 ZIP 从同一未知来源取得只能用于检测传输损坏，不能证明发行者身份。完整解压后，程序根目录应包含 `package.json`、`server`、`dist`、`scripts` 和 `release-manifest.json`；部署包还包含 `node_modules`。
 
@@ -49,7 +49,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\stop.ps1
 
 报告原件位于软件“设置→报告保存文件夹”，默认独立数据目录的“报告”；下载副本由浏览器设置决定。HTML/Word 不依赖 PDF 打印，PDF 需要 Edge 或 Chrome。数据库与 Windows DPAPI 凭据留在本机，跨电脑迁移需要重新登录。
 
-V0.3.1 未提供公网访问、跨机同步、系统服务注册、开机自启安装器或桌面 EXE。真实账户、第三方接口和自动更新源没有验证时，保留“待配置/未验证”，不将手动导入结果冒充自动采集。最后用中文报告：已完成项、健康与实际交互证据、数据和报告位置、待用户扫码或授权项、可用的启动/停止方法。
+V0.3.2 候选未提供公网访问、跨机同步、系统服务注册、开机自启安装器或桌面 EXE。真实账户、第三方接口或当次更新链路没有验证时，保留“待配置/未验证”，不将手动导入结果冒充自动采集。最后用中文报告：已完成项、健康与实际交互证据、数据和报告位置、待用户扫码或授权项、可用的启动/停止方法。
+
+## V0.3.2 更新来源与隔离测试
+
+V0.3.2 内置本项目真实更新公钥，默认来源为 `project-default`、默认通道为 `stable`。员工不需要运行签名工具，也不填写维护者私钥。设置中显示的默认指纹应为 `SHA256:65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd`。既有非空自定义公钥或其他仓库按 `custom` 保留；无效自定义配置需要明确修正，不能在迁移时静默覆盖。
+
+正式通道只查 GitHub 正式 latest，拒绝草稿和 Pre-release；没有正式版本时不将 V0.3.1 预览冒充正式更新。预览通道需填写固定标签，例如 `v0.3.1`。普通主服务可以验证预览下载，但没有安装权限；当前或更旧版本不能降级安装。V0.3.1 已追加独立签名清单，原 ZIP 未变；它仅提供验签输入，不代表旧客户端已有新公钥或正式更新通过。
+
+只有维护者明确执行预览安装演练时，才在候选程序目录中使用另一个空闲端口与独立数据目录。以下路径位于当前用户 TEMP，专供测试，不与默认数据目录共用：
+
+```powershell
+$testData = Join-Path $env:TEMP ('PersonalWorkboard-preview-' + [guid]::NewGuid().ToString('N'))
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start.ps1 -DataDir $testData -Port 18338 -PreviewUpdateTest
+Invoke-RestMethod http://127.0.0.1:18338/health
+```
+
+开始前确认端口空闲；检查 health 与该目录 `service.json` 的 `previewUpdateTest` 都为 true，且版本/实例一致。后续停止、更新和回退始终传相同 `-DataDir $testData -Port 18338`。普通启动不带该开关，并核对 `previewUpdateTest:false`。仅新增预览的严格高版本可在测试模式准备安装；同版或旧版即使验签下载成功仍不可安装。已运行实例的模式不一致时先安全停服，不能直接复用。
+
+活服务维护可保留已核对的测试模式；完全停服后需要再次显式选择 `-PreviewUpdateTest`。回退到不支持该标记的旧版时，只按普通隔离实例验收，不声称旧版提供预览安装权限。维护者签名、一次性票据及公钥轮换见 [RELEASE_FOR_CODEX.md](RELEASE_FOR_CODEX.md)。
 
 ## 配置平台采集器（由本机 Codex 准备）
 
@@ -90,4 +108,4 @@ config.collector = {
 
 只回传首次登记报告、完整结果文字文件及本轮成功 fileChange 明确新增/修改的受支持文件，不扫描项目、不解析聊天里的任意路径作为产物。发送前重新检查 realpath、当前项目授权、文件类型、20 MiB 上限和首次登记 SHA-256。完整文字软件上限4 MiB，超过明确报错保留本机受管结果，不静默截断。报告摘要与文件分别发送。未知发送必须本人核对，人工重试只补未接受分段；旧审批通知永不重试。主进程退出后的 uploading/sending 状态保守恢复为待核对，不能重启即重发。
 
-真实 GitHub 默认目标已填写，签名公钥及正式 Release 未就绪时保持待配置；当前不应通过跳过验签让更新运行。发布由维护者统一协调。给同事的最终提示应使用真实仓库、实际发布并验收的版本与校验值，当前文档不构成正式安装成功声明。
+V0.3.2 默认 GitHub 仓库与公钥已配置；实际签名下载、安装、重启与回退仍分别记录当次证据，不能跳过验签。发布由维护者统一协调。给同事的最终提示使用真实仓库、实际发布并验收的版本与校验值，当前文档不构成正式安装成功声明。

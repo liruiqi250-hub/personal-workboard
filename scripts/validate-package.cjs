@@ -26,14 +26,18 @@ function validate(root, { updateMode = false } = {}) {
   if(!['source','deployment'].includes(manifest.kind))throw Error('发行包类型无效');
   if(updateMode&&manifest.kind!=='deployment')throw Error('本机更新需要完整部署包，不能使用源码包');
   const required=['package.json','package-lock.json','README.md','AGENTS.md','CHANGELOG.md','dist/index.html','dist/client.js','docs/INSTALL_FOR_CODEX.md','docs/RELEASE_FOR_CODEX.md',
-    'scripts/frontend-notices.cjs','public/THIRD_PARTY_NOTICES.txt','public/third-party-licenses/manifest.json','dist/THIRD_PARTY_NOTICES.txt','dist/third-party-licenses/manifest.json',
-    ...['main','store','vault','extract','sources','updates','wechat','codex','reports','managed-codex-store','outbound','collectors','wechat-export-runner'].map(x=>'server/'+x+'.cjs'),
+    'scripts/frontend-notices.cjs','scripts/sign-update.cjs','public/THIRD_PARTY_NOTICES.txt','public/third-party-licenses/manifest.json','dist/THIRD_PARTY_NOTICES.txt','dist/third-party-licenses/manifest.json','public/update-trust.json','dist/update-trust.json',
+    ...['main','store','vault','extract','sources','updates','wechat','codex','reports','managed-codex-store','outbound','collectors','wechat-export-runner','update-protocol','update-trust','publisher-keys'].map(x=>'server/'+x+'.cjs'),
     ...['common.ps1','deploy.ps1','start.ps1','stop.ps1','diagnose.ps1','update.ps1','rollback.ps1','validate-package.cjs','package-policy.cjs','启动看板.cmd','停止看板.cmd'].map(x=>'scripts/'+x)];
   if(manifest.kind==='deployment'){for(const dep of Object.keys(pkg.dependencies||{})){if(!/^(?:@[A-Za-z0-9_.-]+\/)?[A-Za-z0-9_.-]+$/.test(dep))throw Error('依赖名称无效');required.push(`node_modules/${dep}/package.json`);}}
   if(manifest.platform==='win32-x64')required.push('vendor/node/node.exe','vendor/node/LICENSE');
   for(const file of required)if(!expected.has(file))throw Error('部署包缺少必需文件：'+file);
   const {validateNotices}=require('./frontend-notices.cjs');
   validateNotices(path.join(root,'public'));validateNotices(path.join(root,'dist'));
+  const trustFile=path.join(root,'public/update-trust.json'),trust=JSON.parse(fs.readFileSync(trustFile,'utf8'));
+  if(trust.schema!==1||trust.algorithm!=='Ed25519'||trust.owner!=='liruiqi250-hub'||trust.repo!=='personal-workboard'||typeof trust.publicKey!=='string'||!trust.publicKey.startsWith('-----BEGIN PUBLIC KEY-----')||JSON.stringify(trust).includes('PRIVATE KEY')||Object.hasOwn(trust,'protectedPrivateKey'))throw Error('默认更新信任格式或项目绑定不正确');
+  const key=crypto.createPublicKey(trust.publicKey),keyId=crypto.createHash('sha256').update(key.export({type:'spki',format:'der'})).digest('hex');
+  if(key.asymmetricKeyType!=='ed25519'||keyId!==trust.keyId||trust.fingerprint!=='SHA256:'+keyId||!fs.readFileSync(trustFile).equals(fs.readFileSync(path.join(root,'dist/update-trust.json'))))throw Error('默认更新公钥未就绪、指纹不匹配或构建副本不一致');
   for(const file of expected)if(file==='public/THIRD_PARTY_NOTICES.txt'||file.startsWith('public/third-party-licenses/')||file.startsWith('public/third-party-license-sources/')){
     const copied='dist/'+file.slice('public/'.length);if(!expected.has(copied)||!fs.readFileSync(path.join(root,file)).equals(fs.readFileSync(path.join(root,copied))))throw Error('第三方完整声明在源码与构建副本中不一致：'+file);
   }
