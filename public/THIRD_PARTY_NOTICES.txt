@@ -1,0 +1,434 @@
+个人待办事项看板：前端第三方软件声明
+
+本目录随附实际进入前端构建产物的第三方依赖的完整原始许可证及版权声明。
+各依赖适用其原件中的许可条款。本声明不为个人待办事项看板项目选择或授予整体许可证。
+原件为构建时已安装依赖中的逐字节副本；源路径用于追溯，不要求部署包保留前端 node_modules。
+Node 运行时与后端依赖的既有原始许可证继续随其目录提供。
+已知的 Vite 与 Rolldown 注入运行时按实际输出虚拟模块归属其包；未输出的构建工具不列入依赖数量。
+未知且有输出的虚拟模块会阻止构建，不能无声跳过许可归属。
+
+前端依赖数量：48
+机器可验证清单：third-party-licenses/manifest.json
+
+实际输出的第三方虚拟运行时：
+  "\u0000rolldown/runtime.js" -> rolldown@1.2.15
+  "\u0000vite/modulepreload-polyfill.js" -> vite@8.3.5
+
+@ant-design/colors@8.0.1
+包清单原件：node_modules/@ant-design/colors/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_ant-design_colors-8.0.1-37a8c9a593bc-1.txt
+  原件来源：node_modules/@ant-design/colors/LICENSE
+  来源类型：installed-package-original
+  SHA-256：5d367fb0a07340571542eb4ee8eb1add62d37b71bad6786a57c2e9a86bf76c70
+
+@ant-design/cssinjs-utils@2.1.2
+包清单原件：node_modules/@ant-design/cssinjs-utils/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_ant-design_cssinjs-utils-2.1.2-06485e1b18f3-1.txt
+  原件来源：node_modules/@ant-design/cssinjs-utils/LICENSE
+  来源类型：installed-package-original
+  SHA-256：4973f756e858531bdae451f98054278dabd2ef50fc4d3dbccc084ee35964ad3d
+
+@ant-design/cssinjs@2.1.2
+包清单原件：node_modules/@ant-design/cssinjs/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_ant-design_cssinjs-2.1.2-0757431b468a-1.txt
+  原件来源：node_modules/@ant-design/cssinjs/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@ant-design/fast-color@3.0.1
+包清单原件：node_modules/@ant-design/fast-color/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_ant-design_fast-color-3.0.1-584b6bbc246b-1.txt
+  原件来源：node_modules/@ant-design/fast-color/LICENSE
+  来源类型：installed-package-original
+  SHA-256：4973f756e858531bdae451f98054278dabd2ef50fc4d3dbccc084ee35964ad3d
+
+@ant-design/icons-svg@4.6.0
+包清单原件：node_modules/@ant-design/icons-svg/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_ant-design_icons-svg-4.6.0-29f392580f8b-1.txt
+  原件来源：third-party-license-sources/ant-design-icons-svg-4.6.0-LICENSE.txt
+  来源类型：upstream-version-original
+  SHA-256：5d367fb0a07340571542eb4ee8eb1add62d37b71bad6786a57c2e9a86bf76c70
+  官方版本原件：https://raw.githubusercontent.com/ant-design/ant-design-icons/7f2516ac91226d2b41f93b35cb5197c8d94f7189/LICENSE
+  官方版本包清单：https://raw.githubusercontent.com/ant-design/ant-design-icons/7f2516ac91226d2b41f93b35cb5197c8d94f7189/packages/icons-svg/package.json
+  版本 gitHead 核对：https://registry.npmjs.org/@ant-design%2ficons-svg/4.6.0
+
+@ant-design/icons@6.3.4
+包清单原件：node_modules/@ant-design/icons/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_ant-design_icons-6.3.4-2e445b6e0cc0-1.txt
+  原件来源：node_modules/@ant-design/icons/LICENSE
+  来源类型：installed-package-original
+  SHA-256：5d367fb0a07340571542eb4ee8eb1add62d37b71bad6786a57c2e9a86bf76c70
+
+@babel/runtime@7.29.10
+包清单原件：node_modules/@babel/runtime/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_babel_runtime-7.29.10-8e95f9f5aab2-1.txt
+  原件来源：node_modules/@babel/runtime/LICENSE
+  来源类型：installed-package-original
+  SHA-256：117da2af0d4ce0fe1c8e19b5cff9dcd806adf973d328d27b11d4448c4ff24f76
+
+@emotion/hash@0.8.0
+包清单原件：node_modules/@emotion/hash/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_emotion_hash-0.8.0-28d888fd2b55-1.txt
+  原件来源：node_modules/@emotion/hash/LICENSE
+  来源类型：installed-package-original
+  SHA-256：6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a
+
+@emotion/unitless@0.7.5
+包清单原件：node_modules/@emotion/unitless/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_emotion_unitless-0.7.5-33c90c27ba47-1.txt
+  原件来源：node_modules/@emotion/unitless/LICENSE
+  来源类型：installed-package-original
+  SHA-256：6e8d23763cf7cb707ad8f6677aa502ebeca1dda447e6d6e57f6549c1625b9c4a
+
+@rc-component/async-validator@6.0.0
+包清单原件：node_modules/@rc-component/async-validator/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_async-validator-6.0.0-cb13a5118564-1.txt
+  原件来源：node_modules/@rc-component/async-validator/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/checkbox@2.0.0
+包清单原件：node_modules/@rc-component/checkbox/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_checkbox-2.0.0-85b0c009f2f6-1.txt
+  原件来源：node_modules/@rc-component/checkbox/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：212a6f81849cae76de28ce0c35286ae750488cdc2ed25b19d4f144da21125521
+
+@rc-component/collapse@1.2.0
+包清单原件：node_modules/@rc-component/collapse/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_collapse-1.2.0-52dd5f8e0630-1.txt
+  原件来源：node_modules/@rc-component/collapse/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/color-picker@3.1.1
+包清单原件：node_modules/@rc-component/color-picker/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_color-picker-3.1.1-019b72f8a639-1.txt
+  原件来源：node_modules/@rc-component/color-picker/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：8a894af015d320e0d534a14d6ae1895e07cb072678050d34b66be7e579c36a67
+
+@rc-component/dialog@1.10.0
+包清单原件：node_modules/@rc-component/dialog/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_dialog-1.10.0-ad85fc4bf980-1.txt
+  原件来源：node_modules/@rc-component/dialog/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/dropdown@1.0.3
+包清单原件：node_modules/@rc-component/dropdown/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_dropdown-1.0.3-0e6e8224de93-1.txt
+  原件来源：node_modules/@rc-component/dropdown/LICENSE
+  来源类型：installed-package-original
+  SHA-256：4973f756e858531bdae451f98054278dabd2ef50fc4d3dbccc084ee35964ad3d
+
+@rc-component/form@1.8.6
+包清单原件：node_modules/@rc-component/form/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_form-1.8.6-54842d5cb612-1.txt
+  原件来源：node_modules/@rc-component/form/LICENSE
+  来源类型：installed-package-original
+  SHA-256：8781f0ca192057330d7fbab763f8bcd3c8e671032f98e9cf1f8c82d6748e5654
+
+@rc-component/input-number@1.6.2
+包清单原件：node_modules/@rc-component/input-number/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_input-number-1.6.2-7c00e84e9b0d-1.txt
+  原件来源：node_modules/@rc-component/input-number/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/input@1.3.1
+包清单原件：node_modules/@rc-component/input/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_input-1.3.1-b55eaba20de3-1.txt
+  原件来源：node_modules/@rc-component/input/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@rc-component/menu@1.5.0
+包清单原件：node_modules/@rc-component/menu/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_menu-1.5.0-bc0d1f99062e-1.txt
+  原件来源：node_modules/@rc-component/menu/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_menu-1.5.0-bc0d1f99062e-2.txt
+  原件来源：node_modules/@rc-component/menu/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/mini-decimal@1.1.4
+包清单原件：node_modules/@rc-component/mini-decimal/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_mini-decimal-1.1.4-7aa377411d3c-1.txt
+  原件来源：node_modules/@rc-component/mini-decimal/LICENSE
+  来源类型：installed-package-original
+  SHA-256：8781f0ca192057330d7fbab763f8bcd3c8e671032f98e9cf1f8c82d6748e5654
+
+@rc-component/motion@1.3.3
+包清单原件：node_modules/@rc-component/motion/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_motion-1.3.3-b190bfc7cd43-1.txt
+  原件来源：node_modules/@rc-component/motion/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@rc-component/notification@2.1.1
+包清单原件：node_modules/@rc-component/notification/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_notification-2.1.1-e6cb0f857ff2-1.txt
+  原件来源：node_modules/@rc-component/notification/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_notification-2.1.1-e6cb0f857ff2-2.txt
+  原件来源：node_modules/@rc-component/notification/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/overflow@1.0.1
+包清单原件：node_modules/@rc-component/overflow/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_overflow-1.0.1-27447f4752d8-1.txt
+  原件来源：node_modules/@rc-component/overflow/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@rc-component/pagination@1.4.0
+包清单原件：node_modules/@rc-component/pagination/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_pagination-1.4.0-58a5fae59677-1.txt
+  原件来源：node_modules/@rc-component/pagination/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/picker@1.12.2
+包清单原件：node_modules/@rc-component/picker/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_picker-1.12.2-ed253dcae9e0-1.txt
+  原件来源：node_modules/@rc-component/picker/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_picker-1.12.2-ed253dcae9e0-2.txt
+  原件来源：node_modules/@rc-component/picker/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@rc-component/portal@2.2.1
+包清单原件：node_modules/@rc-component/portal/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_portal-2.2.1-748a3aedd7fe-1.txt
+  原件来源：node_modules/@rc-component/portal/LICENSE
+  来源类型：installed-package-original
+  SHA-256：8781f0ca192057330d7fbab763f8bcd3c8e671032f98e9cf1f8c82d6748e5654
+
+@rc-component/resize-observer@1.1.2
+包清单原件：node_modules/@rc-component/resize-observer/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_resize-observer-1.1.2-b7a15d14f4ea-1.txt
+  原件来源：node_modules/@rc-component/resize-observer/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@rc-component/segmented@1.4.0
+包清单原件：node_modules/@rc-component/segmented/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_segmented-1.4.0-ecb39dbf2c5a-1.txt
+  原件来源：node_modules/@rc-component/segmented/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_segmented-1.4.0-ecb39dbf2c5a-2.txt
+  原件来源：node_modules/@rc-component/segmented/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：2481b61123d4f8be84e11847d4bc9684f2aa073d1d2a3275e36fdb7f1cff019a
+
+@rc-component/select@1.10.1
+包清单原件：node_modules/@rc-component/select/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_select-1.10.1-b7dea1bee856-1.txt
+  原件来源：node_modules/@rc-component/select/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_select-1.10.1-b7dea1bee856-2.txt
+  原件来源：node_modules/@rc-component/select/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：4b34f19e8c9e5c66aaf2dd07b7c15a5c3cf24a0095a760dca8473320ffde6b99
+
+@rc-component/steps@1.2.3
+包清单原件：node_modules/@rc-component/steps/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_steps-1.2.3-3bb98b11576c-1.txt
+  原件来源：node_modules/@rc-component/steps/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_steps-1.2.3-3bb98b11576c-2.txt
+  原件来源：node_modules/@rc-component/steps/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/switch@1.0.3
+包清单原件：node_modules/@rc-component/switch/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_switch-1.0.3-6f0620a0739b-1.txt
+  原件来源：node_modules/@rc-component/switch/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
+
+@rc-component/tooltip@1.5.2
+包清单原件：node_modules/@rc-component/tooltip/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_tooltip-1.5.2-9dfa83ecb724-1.txt
+  原件来源：node_modules/@rc-component/tooltip/LICENSE
+  来源类型：installed-package-original
+  SHA-256：59d606be3d687e4dfcaecb9aebcebeb048c940ee613a4a820b759e0345d31e8d
+
+@rc-component/trigger@3.10.1
+包清单原件：node_modules/@rc-component/trigger/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_trigger-3.10.1-ab1aaad094a3-1.txt
+  原件来源：node_modules/@rc-component/trigger/LICENSE
+  来源类型：installed-package-original
+  SHA-256：4973f756e858531bdae451f98054278dabd2ef50fc4d3dbccc084ee35964ad3d
+
+@rc-component/util@1.14.0
+包清单原件：node_modules/@rc-component/util/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_util-1.14.0-b5d8eb7fbf1f-1.txt
+  原件来源：node_modules/@rc-component/util/LICENSE
+  来源类型：installed-package-original
+  SHA-256：f3ae1f96cf22ff7028a4a908b2bf099968391fe06785e4d830926b07e5125ea6
+
+@rc-component/virtual-list@1.6.0
+包清单原件：node_modules/@rc-component/virtual-list/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_virtual-list-1.6.0-6f689c1175ac-1.txt
+  原件来源：node_modules/@rc-component/virtual-list/LICENSE
+  来源类型：installed-package-original
+  SHA-256：59d606be3d687e4dfcaecb9aebcebeb048c940ee613a4a820b759e0345d31e8d
+
+antd@6.6.8
+包清单原件：node_modules/antd/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/antd-6.6.8-7ea35ab6af23-1.txt
+  原件来源：node_modules/antd/LICENSE
+  来源类型：installed-package-original
+  SHA-256：3c82654bb472ebbcacc4c1ff00f94aa8c60c4b7ee011b16bafcbacecc3703458
+
+clsx@2.1.1
+包清单原件：node_modules/clsx/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/clsx-2.1.1-d00f5fa05915-1.txt
+  原件来源：node_modules/clsx/license
+  来源类型：installed-package-original
+  SHA-256：9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97
+
+compute-scroll-into-view@3.1.1
+包清单原件：node_modules/compute-scroll-into-view/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/compute-scroll-into-view-3.1.1-d35d65f51638-1.txt
+  原件来源：node_modules/compute-scroll-into-view/LICENSE
+  来源类型：installed-package-original
+  SHA-256：dfe2b2d612c7c1de1f32dcab5969bd68ecac0022a7582ca8cd4594729b9c8664
+
+is-mobile@5.0.0
+包清单原件：node_modules/is-mobile/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/is-mobile-5.0.0-03be13d5621f-1.txt
+  原件来源：third-party-license-sources/is-mobile-5.0.0-README.txt
+  来源类型：upstream-version-original
+  SHA-256：1f1f35b6a103d7b010f51a6d7d61e3e47dbc71db2c69cbb7c0ffd40c641b04e2
+  官方版本原件：https://raw.githubusercontent.com/juliangruber/is-mobile/2708dd8f07d91f354a46b8dff3053abb6b840067/README.md
+  官方版本包清单：https://raw.githubusercontent.com/juliangruber/is-mobile/2708dd8f07d91f354a46b8dff3053abb6b840067/package.json
+  版本 gitHead 核对：https://registry.npmjs.org/is-mobile/5.0.0
+
+react-dom@19.3.1
+包清单原件：node_modules/react-dom/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/react-dom-19.3.1-7e691db2ae83-1.txt
+  原件来源：node_modules/react-dom/LICENSE
+  来源类型：installed-package-original
+  SHA-256：da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93
+
+react-is@19.3.1
+包清单原件：node_modules/react-is/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/react-is-19.3.1-3b1677df76b0-1.txt
+  原件来源：node_modules/react-is/LICENSE
+  来源类型：installed-package-original
+  SHA-256：da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93
+
+react@19.3.1
+包清单原件：node_modules/react/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/react-19.3.1-f4529719455f-1.txt
+  原件来源：node_modules/react/LICENSE
+  来源类型：installed-package-original
+  SHA-256：da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93
+
+rolldown@1.2.15
+包清单原件：node_modules/rolldown/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/rolldown-1.2.15-a98f919c565e-1.txt
+  原件来源：node_modules/rolldown/LICENSE
+  来源类型：installed-package-original
+  SHA-256：23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734
+  随包完整原件：third-party-licenses/rolldown-1.2.15-a98f919c565e-2.txt
+  原件来源：node_modules/rolldown/THIRD-PARTY-LICENSE
+  来源类型：installed-package-original
+  SHA-256：a877291d800ed43692f3f9ae09d8e01cc6f7293ad39d43896059c188ffbb8b7c
+
+scheduler@0.28.0
+包清单原件：node_modules/scheduler/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/scheduler-0.28.0-e06edbe7016d-1.txt
+  原件来源：node_modules/scheduler/LICENSE
+  来源类型：installed-package-original
+  SHA-256：da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93
+
+scroll-into-view-if-needed@3.1.0
+包清单原件：node_modules/scroll-into-view-if-needed/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/scroll-into-view-if-needed-3.1.0-fad3fae0879f-1.txt
+  原件来源：node_modules/scroll-into-view-if-needed/LICENSE
+  来源类型：installed-package-original
+  SHA-256：62b9f69bb4ccf131e7e4cc8ce6ec5b4acf3d9848f0ac73c3c2f285d716ff1b5c
+
+stylis@4.4.0
+包清单原件：node_modules/stylis/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/stylis-4.4.0-04a746aff549-1.txt
+  原件来源：node_modules/stylis/LICENSE
+  来源类型：installed-package-original
+  SHA-256：88c579c6ee44b41137a21321190d177982e5b17d4fa1b83a4a2e3ea325a8fc9a
+
+throttle-debounce@5.0.2
+包清单原件：node_modules/throttle-debounce/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/throttle-debounce-5.0.2-90ad30fb8fc4-1.txt
+  原件来源：node_modules/throttle-debounce/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：b07649c798231a321f90abbb329c15e41a8b5ec5e814dde3e60cd4a470e3b012
+
+vite@8.3.5
+包清单原件：node_modules/vite/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/vite-8.3.5-2bfe074a49ca-1.txt
+  原件来源：node_modules/vite/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：a22152baa1aef74402443008e767e7c689a524c0909d19b0431d97f5ab066a13
+
