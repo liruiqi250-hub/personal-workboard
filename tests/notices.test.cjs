@@ -154,7 +154,7 @@ function sourcePackage(t) {
     'package.json', 'package-lock.json', 'README.md', 'AGENTS.md', 'CHANGELOG.md', 'dist/index.html', 'dist/client.js',
     'docs/INSTALL_FOR_CODEX.md', 'docs/RELEASE_FOR_CODEX.md',
     ...['main', 'store', 'vault', 'extract', 'sources', 'updates', 'wechat', 'codex', 'reports', 'managed-codex-store', 'outbound', 'collectors', 'wechat-export-runner','update-protocol','update-trust','publisher-keys'].map(name => 'server/' + name + '.cjs'),
-    ...['common.ps1', 'deploy.ps1', 'start.ps1', 'stop.ps1', 'diagnose.ps1', 'update.ps1', 'rollback.ps1', 'validate-package.cjs', 'package-policy.cjs', 'frontend-notices.cjs','sign-update.cjs', '启动看板.cmd', '停止看板.cmd'].map(name => 'scripts/' + name)
+    ...['common.ps1', 'deploy.ps1', 'start.ps1', 'stop.ps1', 'diagnose.ps1', 'update.ps1', 'rollback.ps1', 'maintenance.ps1', 'maintenance-engine.cjs', 'maintenance-legacy.cjs', 'validate-package.cjs', 'package-policy.cjs', 'frontend-notices.cjs','sign-update.cjs', '启动看板.cmd', '停止看板.cmd'].map(name => 'scripts/' + name)
   ];
   for (const name of names) {
     const file = path.join(f.root, name);

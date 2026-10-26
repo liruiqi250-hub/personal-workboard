@@ -1,7 +1,7 @@
 {
   "name": "personal-workboard",
   "productName": "个人待办事项看板",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "private": true,
   "description": "每个人本机使用的中文工作待办、报告和微信助手",
   "main": "server/main.cjs",

@@ -26,7 +26,7 @@ function validate(root, { updateMode = false } = {}) {
   if(!['source','deployment'].includes(manifest.kind))throw Error('发行包类型无效');
   if(updateMode&&manifest.kind!=='deployment')throw Error('本机更新需要完整部署包，不能使用源码包');
   const required=['package.json','package-lock.json','README.md','AGENTS.md','CHANGELOG.md','dist/index.html','dist/client.js','docs/INSTALL_FOR_CODEX.md','docs/RELEASE_FOR_CODEX.md',
-    'scripts/frontend-notices.cjs','scripts/sign-update.cjs','public/THIRD_PARTY_NOTICES.txt','public/third-party-licenses/manifest.json','dist/THIRD_PARTY_NOTICES.txt','dist/third-party-licenses/manifest.json','public/update-trust.json','dist/update-trust.json',
+    'scripts/frontend-notices.cjs','scripts/sign-update.cjs','scripts/maintenance.ps1','scripts/maintenance-engine.cjs','scripts/maintenance-legacy.cjs','public/THIRD_PARTY_NOTICES.txt','public/third-party-licenses/manifest.json','dist/THIRD_PARTY_NOTICES.txt','dist/third-party-licenses/manifest.json','public/update-trust.json','dist/update-trust.json',
     ...['main','store','vault','extract','sources','updates','wechat','codex','reports','managed-codex-store','outbound','collectors','wechat-export-runner','update-protocol','update-trust','publisher-keys'].map(x=>'server/'+x+'.cjs'),
     ...['common.ps1','deploy.ps1','start.ps1','stop.ps1','diagnose.ps1','update.ps1','rollback.ps1','validate-package.cjs','package-policy.cjs','启动看板.cmd','停止看板.cmd'].map(x=>'scripts/'+x)];
   if(manifest.kind==='deployment'){for(const dep of Object.keys(pkg.dependencies||{})){if(!/^(?:@[A-Za-z0-9_.-]+\/)?[A-Za-z0-9_.-]+$/.test(dep))throw Error('依赖名称无效');required.push(`node_modules/${dep}/package.json`);}}

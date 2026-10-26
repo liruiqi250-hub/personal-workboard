@@ -11,6 +11,16 @@ $script:BoardRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot)).T
 $script:BoardMaintenanceHeld = $false
 $script:BoardMaintenanceHandle = $null
 
+function Read-BoardJson([string]$File) {
+    try {
+        $encoding = New-Object Text.UTF8Encoding($false, $true)
+        $text = [IO.File]::ReadAllText($File, $encoding)
+        return (ConvertFrom-Json -InputObject $text -ErrorAction Stop)
+    } catch {
+        throw 'JSON 记录无法读取或 UTF-8 格式无效；请保留文件核对，诊断不会回显文件正文。'
+    }
+}
+
 function Resolve-BoardPath([string]$Path) {
     if (-not [IO.Path]::IsPathRooted($Path)) { throw '请提供绝对路径。' }
     return [IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
@@ -91,7 +101,7 @@ function Get-BoardOwnedHealth($Context) {
     if (-not $health) { return $null }
     $metaPath = Join-Path $Context.DataDir 'service.json'
     if (-not (Test-Path -LiteralPath $metaPath)) { throw "端口 $($Context.Port) 已响应，但没有本数据目录的服务凭据；不会停止或复用未知服务。" }
-    try { $meta = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json } catch { throw 'service.json 损坏，请先运行 diagnose.ps1；不会猜测或结束进程。' }
+    try { $meta = Read-BoardJson $metaPath } catch { throw 'service.json 损坏，请先运行 diagnose.ps1；不会猜测或结束进程。' }
     if (-not (Get-BoardProperty $health 'ok') -or (Get-BoardProperty $health 'service') -ne 'personal-workboard' -or [int]$meta.port -ne $Context.Port -or $meta.version -ne $health.version) { throw '当前端口和本数据目录的服务信息不匹配；请运行诊断或选择其他端口。' }
     $hi = Get-BoardProperty $health 'instanceId'; $mi = Get-BoardProperty $meta 'instanceId'
     if ($hi -or $mi) {
@@ -133,7 +143,7 @@ function Assert-BoardOffline($Context) {
     if (Test-BoardPort $Context.Port) { throw '操作前必须先使用相同端口安全停止服务。' }
     $metaPath = Join-Path $Context.DataDir 'service.json'
     if (Test-Path -LiteralPath $metaPath) {
-        $meta = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json
+        $meta = Read-BoardJson $metaPath
         $oldPort = [int](Get-BoardProperty $meta 'port')
         if ($oldPort -ge 1024 -and $oldPort -le 65535 -and $oldPort -ne $Context.Port -and (Test-BoardPort $oldPort)) { throw '此数据目录的原端口仍有服务，请用原端口安全停服后再操作。' }
     }
@@ -158,7 +168,7 @@ function Get-BoardNode([switch]$DownloadNode) {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri "https://nodejs.org/dist/$version/SHASUMS256.txt" -OutFile (Join-Path $stage 'SHASUMS256.txt') -UseBasicParsing
     Invoke-WebRequest -Uri "https://nodejs.org/dist/$version/$filename" -OutFile (Join-Path $stage $filename) -UseBasicParsing
-    $line = Get-Content -LiteralPath (Join-Path $stage 'SHASUMS256.txt') | Where-Object { $_ -match ('\s+' + [Regex]::Escape($filename) + '$') } | Select-Object -First 1
+    $line = Get-Content -LiteralPath (Join-Path $stage 'SHASUMS256.txt') -Encoding UTF8 | Where-Object { $_ -match ('\s+' + [Regex]::Escape($filename) + '$') } | Select-Object -First 1
     if (-not $line) { throw 'Node 官方校验清单没有目标文件；下载停止。' }
     $expected = ($line.Trim() -split '\s+')[0]
     if ((Get-FileHash -LiteralPath (Join-Path $stage $filename) -Algorithm SHA256).Hash -ne $expected) { throw 'Node SHA-256 校验失败；未启用下载的运行时。' }
@@ -195,7 +205,7 @@ function Start-BoardService {
     if (Test-BoardPort $Context.Port) { throw "端口 $($Context.Port) 已被占用。请运行 diagnose.ps1，或对 deploy/start/stop 使用同一个 -Port。" }
     $metaPath = Join-Path $Context.DataDir 'service.json'
     if (Test-Path -LiteralPath $metaPath) {
-        $old = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json
+        $old = Read-BoardJson $metaPath
         if ([int]$old.port -ne $Context.Port -and (Test-BoardPort ([int]$old.port))) { throw '此数据目录可能已在另一个端口运行。请先使用原端口停止，不能让两个服务同时写同一数据库。' }
     }
     if (-not (Test-Path -LiteralPath (Join-Path $Context.Root 'dist/index.html'))) { throw '缺少构建结果，请先运行 deploy.ps1。' }

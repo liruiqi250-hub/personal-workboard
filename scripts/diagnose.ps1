@@ -2,7 +2,7 @@
 param([string]$DataDir, [int]$Port = 18327)
 . (Join-Path $PSScriptRoot 'common.ps1')
 $context = Get-BoardContext $DataDir $Port
-$package = Get-Content -LiteralPath (Join-Path $context.Root 'package.json') -Raw | ConvertFrom-Json
+$package = Read-BoardJson (Join-Path $context.Root 'package.json')
 Write-Host "程序版本：$($package.version)"
 Write-Host "程序目录：$($context.Root)"
 Write-Host "数据目录：$($context.DataDir)"

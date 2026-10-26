@@ -1,8 +1,10 @@
-# 个人待办事项看板 V0.3.2 开发预览
+# 个人待办事项看板 V0.3.3 开发预览
 
-> **2026-10-27 已知更新恢复缺口（UPD-RECOVERY-01）：** Windows 遇到被占用的子文件时可能只移动了部分程序目录，V0.3.2 自动回退可能漏记该目录。已有数据实例暂不使用本版原地升级或自动回退，保留原程序、数据和备份，等待下一版本经验证的首次迁移/恢复说明。全新隔离试装不等于更新恢复通过。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
+> 本次预览发行：[v0.3.3](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3)。Windows ZIP为45553813字节，SHA-256 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`；限定更新恢复故障已验，真实业务及界面仍待验。
 
-文档版本 V1.3.1。V0.3.2 按开发预览发布，标记为 Pre-release、不作为正式 latest；真实渠道、跨日发送、网页截图和真人设置仍须分别验收。
+> **V0.3.2 已知更新恢复缺口（UPD-RECOVERY-01）：** 被占用的子文件可能使旧程序目录只移动一部分，旧回退记录会漏记该目录。V0.3.2 仍为已发布的 Pre-release、非正式 latest，原冻结包保留。V0.3.3 已按开发预览发布，限定完整部署故障场景经独立复核通过；已有数据实例的首次迁移和旧失败记录恢复使用本指南的新可信外部维护入口，不能调用旧 V0.3.2 的 update.ps1 代替。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
+
+文档版本 V1.5.0。当前软件为 V0.3.3 开发预览，针对更新与回退恢复事务；V0.3.2 已按开发预览发布并披露上述缺口。限定完整部署故障验收已通过独立复核；真实渠道、跨日发送、网页截图和真人设置仍须分别完成。
 
 在自己的 Windows 电脑上，用浏览器整理待办、记录工作来源、生成日报和周报。每人使用自己的数据库和登录授权。当前交付方式是**本机 Web 程序**：Node 后台服务加浏览器界面，默认地址 `http://127.0.0.1:18327`。
 
@@ -10,7 +12,7 @@
 
 ## 第一次使用
 
-真实公开仓库为 [liruiqi250-hub/personal-workboard](https://github.com/liruiqi250-hub/personal-workboard)。试装请明确选择 [V0.3.2 预览发行页](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2) 中的 `personal-workboard-0.3.2-windows-x64.zip`（含 Node）。SHA-256 为 `455ea75b8f19113348cca122d9fc56205695a90446ebec93bd61bbcbd1634f59`。源码包 `personal-workboard-0.3.2-public-source.zip` 需要另行安装依赖和构建；旧版 V0.3.1 仍保留。
+真实公开仓库为 [liruiqi250-hub/personal-workboard](https://github.com/liruiqi250-hub/personal-workboard)。优先选择 [V0.3.3 预览发行页](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3) 的 `personal-workboard-0.3.3-windows-x64.zip`（含 Node 和生产依赖），45553813字节，SHA-256为 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`。源码包 `personal-workboard-0.3.3-public-source.zip` 需要另行安装依赖和构建。旧V0.3.2保留原缺口说明；已有数据实例首次迁移必须使用下文独立可信V0.3.3工具入口，不能直接调用旧脚本。
 
 1. 将 ZIP 完整解压到自己的程序文件夹，不要在压缩包窗口里直接运行。
 2. 双击 `scripts/首次部署.cmd`。系统会准备服务并通过默认外部浏览器打开页面。没有合适 Node 时，该脚本会从 **HTTPS 的 nodejs.org 官方站**下载固定 `v24.15.0` Windows x64 ZIP，校验官方 `SHASUMS256.txt`，仅存于本项目 `vendor/node`，不修改系统 PATH。此下载需要网络；仅支持 Windows x64。
@@ -53,32 +55,23 @@ V0.3.1 增加两个具体采集适配器：微信指定版本源码工具读取�
 
 ## 升级、回退和诊断
 
-V0.3.2 内置本项目的仓库与 Ed25519 发布公钥，普通使用者无需填写公钥。“设置→软件更新”默认选择正式通道：只检查非草稿、非 Pre-release 的正式发行。正式发行尚未就绪时，保留无可用正式更新的状态。明确选择预览通道并填写固定标签，例如 `v0.3.1`，可验证预览资产；普通主服务不能安装预览，同版或旧版也不能降级安装。
+V0.3.3 继承本项目仓库与 Ed25519 发布公钥，默认指纹为 `SHA256:65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd`。正式通道只接受非草稿、非 Pre-release 的正式发行；预览通道要求固定标签，普通主服务只允许验签下载，不能安装预览或降级。既有明确自定义来源保留，公钥轮换由可信版本或可信安装流程交付。
 
-默认公钥指纹为 `SHA256:65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd`，随 `public/update-trust.json` 分发。既有明确填写的自定义仓库和公钥会保留，需要时在高级设置中明确切回项目默认来源。软件不会从网络自行信任另一把新公钥；轮换由维护者通过已可信版本或可信安装流程交付。
+本次开发预览在替换前建立完整、逐文件哈希可验证的旧程序副本和数据快照，并写入操作意图。快照与目标发行暂存保留；更新或回退中断后，根据完整恢复依据和当前已知哈希核对重试。未知内容、缺失原件或绑定冲突会拒绝并保留现场。总控最终ZIP已覆盖目录内占用、动作后记账前中断、回退失败重试、旧分裂记录恢复及版本/模式门；该缺口在新维护入口和这些已验路径内关闭，旧版算法仍有缺口。
 
-V0.3.1 预览发行已追加独立的 `update-manifest.json`，原 ZIP 保持不变。它供新验证器核对签名、仓库、版本、通道、字节数与 SHA-256；这不使旧 V0.3.1 客户端自动获得新公钥，也不代表正式更新或整体验收已经通过。维护者签名和隔离演练详见 [RELEASE_FOR_CODEX.md](docs/RELEASE_FOR_CODEX.md)。
+**V0.3.2 首次迁移必须使用独立的新可信 V0.3.3 工具目录。** 从该目录运行 `scripts/maintenance.ps1 -Action Update`，明确指定旧 `-ProgramDir`、原 `-DataDir/-Port`、新 Windows 部署 ZIP、可信 `-ExpectedSha256` 和 `-ExpectedVersion 0.3.3`。这条路径不调用旧 V0.3.2 更新脚本，完整可复制步骤见 [安装指南](docs/INSTALL_FOR_CODEX.md#v033-首次迁移与旧失败记录恢复)。从本次真实V0.3.3预览发行取得完整可信工具，首次迁移仍走外部maintenance入口。
 
-手动维护时，先从可信发行记录取得 ZIP 和 SHA-256。`update.ps1` 先校验 ZIP 与内置文件清单；若传入 `ExpectedVersion`，同时核对包内版本，再安全停服并保存对应数据快照、保留上一程序，然后替换程序。数据目录始终独立。下面使用自己下载文件的绝对路径和发行页给出的真实 SHA-256：
+已有旧 `needs-rollback` 记录时，同样从新可信工具目录使用 `-Action RecoverLegacy -PreviousDir`，提供当时失败目标的原 ZIP 与可信 SHA-256。模块核对原清单，把分裂在现场和 saved 中的旧原件完整重建到新快照；缺失、未知修改或冲突会拒绝，原现场保留。首次导入后的恢复若再次中断，按回执中的新事务目录使用 `-Action Rollback` 重试，保留第一次回退前数据。
 
-```powershell
-.\scripts\update.ps1 -PackagePath (Resolve-Path '.\下载的新版本.zip').Path -ExpectedSha256 '填写64位SHA256'
-```
+回退会保留完整的回退前数据快照，再恢复旧程序和对应数据库、凭据。升级后新任务可从首次回退前快照核对，报告原件不删除；当前界面回到旧数据库的状态。程序目录、独立数据目录和报告目录分别保管。源码 checkout 或缺少原 `release-manifest.json` 的目录不能直接作为事务升级目标，需先受控部署完整 Windows 包并核对同一数据目录与实际数据完整性，不能声称已自动迁移。
 
-回退时将脚本输出的上一版本目录传给 `rollback.ps1 -PreviousDir`。回退会先额外保存当前数据，再恢复旧程序和它对应的数据库、凭据。升级后新增记录仍留在“回退前”快照中，当前界面会回到升级前状态；报告文件不会删除。只覆盖旧程序文件不能保证数据兼容。
+核对快照中的任务时，先把完整快照复制到另一个独立目录，再打开副本。SQLite 查看工具即使选择只读，也可能在原目录生成 WAL/SHM 辅助文件；原密封快照只作哈希核对，保持原样供恢复重试使用。
 
-```powershell
-.\scripts\diagnose.ps1
-.\scripts\rollback.ps1 -PreviousDir (Resolve-Path '.\.workboard-previous\实际目录名').Path
-```
-
-如遇端口占用，可在部署、启动、停止、诊断和更新时统一使用 `-Port 18328`。隔离演练还要传入项目目录之外的绝对 `-DataDir`。不要临时改变端口，让同一数据目录同时被两个服务打开。脚本不会按旧 PID 强杀未知进程，也不会递归删除个人资料。
-
-给 Codex 的完整安装说明见 [INSTALL_FOR_CODEX.md](docs/INSTALL_FOR_CODEX.md)，维护与发版说明见 [RELEASE_FOR_CODEX.md](docs/RELEASE_FOR_CODEX.md)。
+诊断使用 `scripts/diagnose.ps1`。维护始终使用原数据目录和端口；脚本核对实例，不按旧 PID 强杀未知进程。维护、发版与完整恢复规则见 [RELEASE_FOR_CODEX.md](docs/RELEASE_FOR_CODEX.md)。
 
 ## 当前交付边界
 
-这是 V0.3.2 本机 Web 开发预览，未提供公网访问、跨电脑共享数据库、Windows 系统服务、开机自启安装器和 Docker 部署。后台必须在本机运行；尚未配置的真实账号、组织机器人、模型接口与 Codex 遥控，需要在使用者自己的电脑完成授权和验证。默认可信更新来源已配置，V0.3.2 预览发布、实际签名升级与回退的验收状态以当次发行记录为准；软件不会跳过验证安装。
+这是 V0.3.3 本机 Web 开发预览，未提供公网访问、跨电脑共享数据库、Windows 系统服务、开机自启安装器和 Docker 部署。后台必须在本机运行；尚未配置的真实账号、组织机器人、模型接口与 Codex 遥控，需要在使用者自己的电脑完成授权和验证。默认可信更新来源已配置；V0.3.2 已发布并保留恢复缺口披露，V0.3.3 已按Pre-release发布、非正式latest。实际签名升级、首次迁移与故障恢复以当次验收记录为准，软件不会跳过验证安装。
 
 界面与脚本能否正常运行，以本机健康检查和真实操作回执为准；文档、打包完成或二维码出现均不等同于真实渠道接入成功。
 

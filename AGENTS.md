@@ -1,10 +1,12 @@
-# Codex 安装与维护约定 V1.3.1
+# Codex 安装与维护约定 V1.5.0
 
-> **2026-10-27 已知更新恢复缺口（UPD-RECOVERY-01）：** Windows 遇到被占用的子文件时可能只移动了部分程序目录，V0.3.2 自动回退可能漏记该目录。已有数据实例暂不使用本版原地升级或自动回退，保留原程序、数据和备份，等待下一版本经验证的首次迁移/恢复说明。全新隔离试装不等于更新恢复通过。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
+> 本次预览发行：[v0.3.3](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3)。Windows ZIP为45553813字节，SHA-256 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`；限定更新恢复故障已验，真实业务及界面仍待验。
 
-目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2 本次按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。本文件不授权发布。
+> **V0.3.2 已知更新恢复缺口（UPD-RECOVERY-01）：** 被占用的子文件可能使旧程序目录只移动一部分，旧回退记录会漏记该目录。V0.3.2 仍为已发布的 Pre-release、非正式 latest，原冻结包保留。V0.3.3 已按开发预览发布，限定完整部署故障场景经独立复核通过；已有数据实例的首次迁移和旧失败记录恢复使用本指南的新可信外部维护入口，不能调用旧 V0.3.2 的 update.ps1 代替。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
 
-当前软件为 V0.3.2 开发预览。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
+目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2 本次按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。V0.3.3 本次按 Pre-release 发布、非正式 latest，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3 。本文件不授权发布。
+
+当前软件为 V0.3.3 开发预览。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
 
 所有用户沟通使用中文。软件每次变更都递增版本号，更新 CHANGELOG，保留可回退的上一程序及对应数据快照。UI 改动优先使用已安装的 Impeccable 技能，复用现有 Ant Design 组件，运行实际页面并检查中文、布局、溢出、主要状态与 Impeccable 检测结果。
 
@@ -37,13 +39,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose.ps1
 
 ## 升级和回退
 
-先读 `docs/RELEASE_FOR_CODEX.md`。只接受已核验 ZIP 或真实 GitHub 仓库的发行资产，`ExpectedSha256` 必填。没有正式仓库地址时不得编造远端、发行链接或宣称已发布。`scripts/update.ps1` 在覆盖前保留独立数据快照与 `.workboard-previous` 中的上一程序。`scripts/rollback.ps1` 只能恢复带 `update-metadata.json` 的指定上一版本，数据库与凭据恢复到匹配快照，回退前数据和报告文件均保留。
+先读 `docs/RELEASE_FOR_CODEX.md`。只接受已核验 ZIP 或真实 GitHub 仓库的发行资产，`ExpectedSha256` 必填。没有正式仓库地址时不得编造远端、发行链接或宣称已发布。V0.3.3 维护入口在替换前完成旧程序及数据快照的逐文件哈希核对，使用写前事务日志；更新和回退均保留完整原件与首次回退前数据，失败重试不消费快照。总控最终ZIP限定故障验收已通过，该缺口在新维护入口及已验路径内关闭；不扩大到旧3.2算法、正式自动更新或真实业务验收。
 
-V0.3.2 默认 `sourceMode=project-default`，使用 `public/update-trust.json` 里的本项目仓库、公钥和指纹；员工启动不生成维护者密钥。旧设置中明确的自定义仓库/公钥必须保留；旧自定义配置无效时显示配置错误，不能静默抹除或替换。正式通道 `stable` 只接受非草稿、非 Pre-release 的正式发行；`preview` 必须明确固定 `v主.次.修订` 标签。普通主服务只能验签下载预览，不能安装；同版和旧版只能验证，不能降级。
+V0.3.2 起默认 `sourceMode=project-default`，使用 `public/update-trust.json` 里的本项目仓库、公钥和指纹；员工启动不生成维护者密钥。旧设置中明确的自定义仓库/公钥必须保留；旧自定义配置无效时显示配置错误，不能静默抹除或替换。正式通道 `stable` 只接受非草稿、非 Pre-release 的正式发行；`preview` 必须明确固定 `v主.次.修订` 标签。普通主服务只能验签下载预览，不能安装；同版和旧版只能验证，不能降级。
 
 预览安装仅用于明确的隔离测试：`start.ps1 -PreviewUpdateTest` 加项目外独立绝对 `-DataDir`、非默认数据目录、非 `18327` 端口，检查 `/health` 与 `service.json` 的 `previewUpdateTest:true`。普通启动必须保持 false，不能用继承环境变量绕过隔离。安装使用持久一次性票据，改来源/通道/公钥后重新检查；已消费或重启中断的票据先人工核对，不自动重放。安装入口向更新脚本传递已验签的 `ExpectedVersion`，在停服前核对包内版本。
 
 维护者签名只使用显式 `node scripts/sign-update.cjs init/public/sign`。默认私钥封套在项目外 `%LOCALAPPDATA%\PersonalWorkboardPublisher\liruiqi250-hub\personal-workboard`，受当前 Windows 用户 DPAPI 保护；禁止把封套、明文私钥或凭据纳入源码、部署包、日志或诊断。轮换需经已可信版本带入新公钥，错过过渡版本使用可信安装流程，不从未验证网络内容自动替换信任。发布和资产上传由维护者统一协调。
+
+V0.3.2 的首次安全迁移要从独立、可信的 V0.3.3 完整工具目录执行 `maintenance.ps1 -Action Update -ProgramDir <旧程序> -DataDir <原数据> -Port <原端口> -PackagePath <新Windows ZIP> -ExpectedSha256 <可信SHA> -ExpectedVersion 0.3.3`。不能调用旧 V0.3.2 的 update.ps1 后声称已经使用新恢复机制。旧包、原数据和备份均保留。
+
+旧 needs-rollback 用新工具的 `-Action RecoverLegacy -PreviousDir <旧记录目录>`，ZIP 必须是当时失败的目标包，可信 SHA 同时与旧 metadata.packageSha256 相符。恢复依据是旧完整 manifest，组合 source/saved 原件而非旧 moved 成功列表；未知修改、缺失、路径或绑定冲突明确拒绝并保留现场。成功导入后若恢复中断，使用回执中新 schema2 previousDir 的 `-Action Rollback` 重试，不能重新导入后覆盖首次回退前快照。
+
+源码安装或缺少有效 release-manifest 的目录不直接参与事务升级。先受控部署完整 Windows 包，安全停服并保留数据快照，再核对原 DataDir/Port 和实际记录后切换；计划切换不代表数据迁移成功。完整命令见安装指南。
 
 脚本读写、移动和复制前必须检查绝对路径边界，拒绝路径联接和越界包条目。不能递归删除用户资料，不能为发布而扫描或打包聊天、私人配置和真实数据库。公开包由 `scripts/package.cjs` 显式白名单构建，禁止直接压缩整个工作目录。
 

@@ -1,8 +1,10 @@
-# 维护、升级与公开发版 V1.3.0
+# 维护、升级与公开发版 V1.5.0
 
-当前为 V0.3.2 开发预览；离线测试与本机部署不代表真实渠道或真人界面验收通过。
+> 本次预览发行：[v0.3.3](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3)。Windows ZIP为45553813字节，SHA-256 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`；限定更新恢复故障已验，真实业务及界面仍待验。
 
-软件当前 V0.3.2 开发预览；每次变更都递增 `package.json`、锁文件中的版本，更新 README 与 CHANGELOG，保留上一程序及对应数据。真实目标仓库为 https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已作为 Pre-release 发布，非正式 latest；V0.3.2 本次同样按 Pre-release 发布、非正式 latest，实际资产以对应发行页为准。发布由维护者统一协调，开发阶段准备干净 stage、版本 ZIP 和明确文件清单，避免并发 push 或创建 Release。
+当前为 V0.3.3 开发预览；限定完整部署故障场景已通过独立复核，UPD-RECOVERY-01在新维护入口及已验路径内关闭，旧版冻结维护算法仍有缺口；离线测试与本机部署不代表真实渠道或真人界面验收通过。
+
+软件当前 V0.3.3 开发预览；每次变更都递增 `package.json`、锁文件中的版本，更新 README 与 CHANGELOG，保留上一程序及对应数据。真实目标仓库为 https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已作为 Pre-release 发布，非正式 latest；V0.3.2 已按 Pre-release 发布、非正式 latest，并披露 UPD-RECOVERY-01 更新恢复缺口；其tag和原资产保留。V0.3.3 本次作为 Pre-release 发布、非正式 latest；实际资产与校验值见本标签发行页，整体业务仍未验收。发布由维护者统一协调，开发阶段准备干净 stage、版本 ZIP 和明确文件清单，避免并发 push 或创建 Release。
 
 ## 构建公开部署包
 
@@ -29,41 +31,53 @@ node .\scripts\package.cjs
 
 ## 更新到另一版本
 
-V0.3.2 默认使用 `sourceMode=project-default`，内置本项目 owner/repo 与 Ed25519 公钥，员工不需要配置签名材料。`public/update-trust.json` 与 `dist/update-trust.json` 必须字节一致，keyId 为公钥 SPKI DER 的 SHA-256。当前指纹为 `SHA256:65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd`。原有明确自定义仓库或非空公钥保留为 `custom`；无效自定义配置显示错误，不能静默变成项目默认来源。
+V0.3.2 起默认使用 `sourceMode=project-default`，内置本项目 owner/repo 与 Ed25519 公钥，员工不需要配置签名材料。`public/update-trust.json` 与 `dist/update-trust.json` 必须字节一致，keyId 为公钥 SPKI DER 的 SHA-256。当前指纹为 `SHA256:65b116f1c4d1c91be3a108ed51051b29683d69654fed638065f8e9a30d7edebd`。原有明确自定义仓库或非空公钥保留为 `custom`；无效自定义配置显示错误，不能静默变成项目默认来源。
 
 `stable` 查询正式 latest，并拒绝 draft/prerelease。`preview` 要求明确固定 tag，且实际 Release 必须为 Pre-release；普通主服务只验签下载，安装需显式隔离测试模式。任何通道都不允许同版或降级安装。没有正式 Release 时不把预览或“最新标签”当成正式更新。
 
 程序先验证固定协议的 Ed25519 签名，再绑定 owner/repo/channel/version/tag/assetName/platform/URL/SHA-256/bytes/keyId/sequence/createdAt，实际 GitHub Release 和资产也必须一致。ZIP 限 400 MiB，受控 GitHub HTTPS 重定向且有大小/超时上限。持久账本按来源、通道和公钥记录序号与一次性安装票据；安装准备占用票据、重读文件、备份、再次核对后消费。已消费或中断的票据不能自动重放。仅备份阶段明确失败时，需使用者显式重新下载核验后申请新票据，失败记录保留。
 
-手动维护时仍须从可信发行记录取得新 ZIP 和真实 SHA-256。命令行更新进行 HTTPS 资产下载、ZIP SHA-256、内部文件清单及可选 `ExpectedVersion` 核验，不替代程序内的签名验证入口。
+### V0.3.3 事务维护与首次迁移
 
-本地已下载包：
+手动维护从可信发行/交接记录取得完整 Windows ZIP 和真实 SHA-256，命令行的 ExpectedVersion 与包内版本在停服前核对。它不替代程序入口的签名验证、预览隔离和持久一次性票据。首次从 V0.3.2 迁移必须使用独立的新可信 V0.3.3 工具目录，旧客户端调用旧 update.ps1 并不能获得新恢复机制。
 
-```powershell
-.\scripts\update.ps1 -PackagePath (Resolve-Path '.\新版本部署包.zip').Path -ExpectedSha256 '填写发行记录中的64位SHA256'
-```
-
-也可传入使用者已核实的真实 `-Repository owner/repo -Tag v版本 -AssetName 资产.zip -ExpectedSha256 校验值`，脚本仅构造 `https://github.com/.../releases/download/...`。这些是参数说明，不是真实仓库。HTTP 下载和缺少校验值均不支持。
-
-从程序内安装时必须传入已验签的 `-ExpectedVersion`；脚本在停服前核对包内实际版本与声明一致，并拒绝同版和降级。手动维护可以同时传此参数加强版本核对。不要为了安装预览而修改默认用户数据目录或 `18327` 主服务的模式。
-
-脚本先在 `.workboard-updates` 验证包，再核对本机实例并通过 `service.stop` 停服。独立数据目录的 `backups/before-update-*` 保存数据库、凭据及数据目录内的报告等文件；日志、打印临时文件和已有 backups 不重复复制。自定义到数据目录之外的报告原件仍由原位置保管，升级不覆盖它们。
-
-上一程序存于 `.workboard-previous/时间-标识/program`，`update-metadata.json` 将旧/新版本、端口、独立数据目录、包校验值和对应快照绑定。此目录包含本机路径，只留本地，不能加入公共包。替换失败会保留已移动文件与进度，并输出指定回退命令；它不会谎报更新完成。正常更新后核对新版本健康与主要功能。
-
-## 回退时匹配数据库
-
-使用更新脚本输出的上一版本目录：
+在新工具目录运行；以下变量为已核对的旧目录/端口、新包与可信SHA，完整采集步骤见 [INSTALL_FOR_CODEX.md](INSTALL_FOR_CODEX.md#v033-首次迁移与旧失败记录恢复)：
 
 ```powershell
-.\scripts\rollback.ps1 -PreviousDir (Resolve-Path '.\.workboard-previous\实际目录名').Path
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action Update -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PackagePath $newZip -ExpectedSha256 $newSha256 -ExpectedVersion 0.3.3
 ```
 
-自定义部署要补上原来的 `-DataDir` 和 `-Port`。脚本拒绝目录/端口不符或快照缺失的回退；先停服，保留回退前程序及完整数据快照，再恢复上一程序和升级前匹配的数据库、凭据。升级后新增任务会留在“回退前”快照中，当前界面退回升级前状态；报告文件不删除。不要只放回一个旧 JS/EXE 后宣称回退成功，也不要递归清空用户数据。
+V0.3.3 的 update.ps1/rollback.ps1 为新 maintenance.ps1 的包装入口。外壳把可信 Node 和两个维护模块复制到程序条目之外的 runner，并核对副本哈希，避免替换仍在执行的 runtime/脚本。先核 ZIP/hash/清单和版本，再核对实例并安全停服。任何破坏性替换前，旧程序必须匹配完整原清单，完整旧程序与数据快照复制并逐文件验证；源码 checkout 或没有有效原 release-manifest 的目录会拒绝，需要受控部署完整 Windows 包并核对原数据后再切换。
 
-独立演练时可使用所有脚本的 `-DataDir`、`-Port`、部署的 `-SkipInstall` 和升级/回退的 `-NoStart`。验收不得使用真实用户数据库。静态解析通过只能证明脚本语法可解析，仍需核验下载、校验失败保护、端口冲突、重复启动、安全停服、更新和回退的实际行为。
+事务使用写前意图和完整快照，不依赖“目录Move成功后才追加moved”的旧成功列表。程序按文件保留到独立证据区，再从保留的目标发行暂存复制、验证并替换；旧快照和目标发行暂存不消费。当前未知代码、额外程序文件、链接、缺失原件或绑定冲突会拒绝并保留现场。部分操作完成或进程在动作与记账之间中断时，重试依据是完整快照和已知哈希，而不是猜测某个after标志。
 
-预览安装测试必须通过 `start.ps1 -PreviewUpdateTest`，同时显式指定项目外、非默认的数据目录及非 `18327` 端口；health 与 service 元数据的 `previewUpdateTest` 必须一致为 true。普通启动剥离继承的测试环境变量。活服务更新/回退可保留已核实模式；完全停服后须显式重新选择。回退到不支持该模式的旧版时只做普通隔离升级/回退验证。完整命令见安装指南。
+### 回退与回退再失败
+
+使用回执中的 schema2 previousDir，保持同一 ProgramDir/DataDir/Port：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action Rollback -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PreviousDir $transactionPrevious
+```
+
+首次回退先完整保存当前程序及数据并密封哈希，后续重试复用该首次快照，不能用半恢复状态覆盖它。恢复旧程序及绑定数据库/凭据时，每项检查意图、当前位置和哈希；已是目标旧哈希可跳过，未知冲突拒绝。回退前新任务保存在可读取的首次 before-rollback 数据副本；当前界面会回到旧数据库状态，报告原件不删除。因明确文件占用而中断时，释放该占用后用同一事务重试，不递归清空现场或根据旧PID强杀未知进程。
+
+业务核对必须先将完整密封快照复制到独立临时目录，再对副本连接 SQLite。只读 SQLite 连接仍可能创建 `-wal`、`-shm`，直接打开原快照会改变文件集合并使后续 seal 核验拒绝。原快照只做逐文件哈希核对；不要改清单或忽略未知辅助文件来强行继续。
+
+### 兼容旧 needs-rollback
+
+保留旧现场，从新可信工具目录运行 RecoverLegacy，提供旧 previousDir、当时失败目标的原部署 ZIP 和可信 SHA。外壳先核 ZIP SHA 并要求等于旧 metadata.packageSha256，再调用旧记录组合模块。其完整旧 manifest 必须与 fromVersion 相符；每个旧文件在 saved/live 中找到正确原件后，才组合成新、完整、可验证的旧快照。旧 moved/installed 只验证结构，不能证明目录完整。已知新文件由核验过的目标发行包证明；缺失、未知修改、同版manifest字节冲突或绑定错误均拒绝。
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action RecoverLegacy -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PreviousDir $legacyPrevious -PackagePath $failedZip -ExpectedSha256 $failedSha256
+```
+
+原现场、旧metadata和旧快照不被导入步骤改写；新导入目录非空时拒绝覆盖。导入成功后如果回退再次失败，按回执中新 schema2 previousDir 使用 Rollback重试，保留首次回退前状态。总控已用最终冻结ZIP覆盖真实目录内占用、动作/记账间中断、回退失败重试、旧3.2外部首次迁移及旧分裂现场恢复，UPD-RECOVERY-01在新维护入口和已验路径内关闭；旧客户端自动升级、正式stable及真实业务仍待验。
+
+### 模式、数据与验证边界
+
+维护保持已核对活服务的预览模式，显式预览安装测试仍要求非默认数据目录与非18327端口；普通启动剥离继承测试标志。MaintenanceTest仅用于显式TEMP隔离故障演练，不能通过继承环境在生产开启。NoStart只完成离线阶段，还要实际启动检查health/版本/模式与主要功能。回执completed或health正常均不能替代任务/设置/报告的完整核对。
+
+日志、凭据正文、数据库及这些包含本机路径的事务记录不能进入公开包。完整数据快照中的报告副本与软件设置到数据目录之外的报告原件分别保管；后者仍在原位置，不由程序回退删除。正式发布、真实渠道、跨日发送和真人界面验收仍分别登记。
 
 ## 维护者签名与密钥轮换
 
@@ -78,24 +92,28 @@ node .\scripts\sign-update.cjs public
 
 `init` 首次创建密钥，重复执行核对已有封套，不轮换或覆盖；`public` 只输出公钥、keyId 和指纹。工具不提供明文私钥导入/导出。可用 `--key-dir` 明确选择项目外本机盘符绝对目录；目录或祖先为链接、位于项目内或为设备/UNC 等别名时拒绝。
 
-先完成部署包冻结、独立启动与回退检查，再签实际 ZIP。下面为 V0.3.2 候选的预览签名准备命令，输出不会自动发布，序号 2 延续本公钥预览通道已用的序号 1：
+先完成部署包冻结、独立启动与回退检查，再签实际 ZIP。下面保留V0.3.3冻结包实际使用的预览签名命令示例，输出不会自动发布。序号 3 延续本公钥预览通道已发布的序号 1、2；执行前再次核对实际最高序号，不能重用或回退：
 
 ```powershell
-$zip = (Resolve-Path '.\release\personal-workboard-0.3.2-windows-x64.zip').Path
-$signingOutput = Join-Path (Get-Location).Path 'release-metadata\v0.3.2-preview'
-node .\scripts\sign-update.cjs sign --zip $zip --version 0.3.2 --tag v0.3.2 --channel preview --sequence 2 --output-dir $signingOutput
+$zip = (Resolve-Path '.\release\personal-workboard-0.3.3-windows-x64.zip').Path
+$signingOutput = Join-Path (Get-Location).Path 'release-metadata\v0.3.3-preview'
+node .\scripts\sign-update.cjs sign --zip $zip --version 0.3.3 --tag v0.3.3 --channel preview --sequence 3 --output-dir $signingOutput
 ```
 
 工具核对 ZIP 包内项目名称、版本、部署类型与平台，再计算实际大小/hash并签名，输出 `update-manifest.json`。签名后不能改 ZIP；相同输出文件只有完全相同时才允许复用，不覆盖不同内容。每个 owner/repo/channel/keyId 范围内维护严格递增的正整数 sequence，不能重签旧序号冒充新发布；正式与预览通道分别记账。上传前逐项复核清单与 ZIP 的版本、tag、通道、资产名、字节数和 hash，上传由维护者统一协调。
 
 现有 V0.3.1 Pre-release 已追加独立 `update-manifest.json`：734 字节，SHA-256 `64777b758294f0d8ea29fccc3731a38f4174225d0d086463e7acf53036626b9f`，preview 通道 sequence=1。原 Windows ZIP 保持 45,476,907 字节，SHA-256 `e3ffcfd818260a1f384ae5ea73ad70f703ed2a9e417a0a77c9581ad7416960eb`。追加清单不修改原包、不把它改成正式 latest，也不使旧客户端自动具备新公钥。验签下载、实际安装、重启和回退各自需真实证据。
 
+已发布 V0.3.2 的 preview sequence=2，Windows ZIP为45,521,036字节，SHA-256为455ea75b8f19113348cca122d9fc56205695a90446ebec93bd61bbcbd1634f59；734字节update-manifest.json的SHA-256为2dd6c7255c4c4ff38b0ddd674de2814d02e3272ea05543f499fdf75846eeff21。该包和tag保留；其旧算法缺口不会因新版本文档而消失。
+
 轮换时先发布由旧可信密钥签名、包内带新公钥和指纹的过渡版本，确认过渡安排后再用新密钥签发后续版本；当前程序只信任所选公钥，不实现网络下载后自动信任另一把 key。没有收到可信过渡版本的用户，通过核对发行者、文件和校验值的可信安装流程恢复。自定义来源由使用者明确更新，不能自动覆盖。DPAPI 绑定当前 Windows 用户，换账户/换机不能假定旧封套可用；不要临时生成新 key 后继续声称与原指纹相同。
 
 ## 试装转发文案
 
-当前只能按已发布且核验过的明确预览版本试装。V0.3.2 发布后另行核对资产与校验值，再更新转发版本。建议文案：
+V0.3.3本次为已发布开发预览，精确文件与SHA见本页开头和实际发行页。V0.3.2已披露UPD-RECOVERY-01，不向已有数据实例转发旧原地升级指令。以下只供预览试装，不是最终业务交付：
 
-> 个人待办事项看板已提供 V0.3.1 开发预览：https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1 。请在自己的 Windows 电脑上让 Codex 读取 README.md、AGENTS.md 与安装指南，核对该页 Windows ZIP 的 SHA-256 后完成隔离试装。数据库和报告存自己电脑；微信扫码、邮箱及其他账号授权由本人完成。安装后核验版本、待办、报告及安全重启，并说明尚未通过的真实渠道和界面验收。
+> 请让Codex从 https://github.com/liruiqi250-hub/personal-workboard 的v0.3.3预览发行读取README、AGENTS和安装指南，下载Windows部署ZIP并核对SHA-256 42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725。全新本机试装与已有V0.3.2外部maintenance首次迁移分别按说明执行；旧失败记录保留现场并按RecoverLegacy核对。本人完成真实账号授权；正式更新、实际页面与三渠道业务仍未整体验收。
+
+
 
 发布还需使用者明确授权和可用的仓库权限。文案示例不代表已经发布、安装或向同事发送。
