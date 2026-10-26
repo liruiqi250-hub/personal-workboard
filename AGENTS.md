@@ -1,4 +1,6 @@
-# Codex 安装与维护约定 V1.3.0
+# Codex 安装与维护约定 V1.3.1
+
+> **2026-10-27 已知更新恢复缺口（UPD-RECOVERY-01）：** Windows 遇到被占用的子文件时可能只移动了部分程序目录，V0.3.2 自动回退可能漏记该目录。已有数据实例暂不使用本版原地升级或自动回退，保留原程序、数据和备份，等待下一版本经验证的首次迁移/恢复说明。全新隔离试装不等于更新恢复通过。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
 
 目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2 本次按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。本文件不授权发布。
 
