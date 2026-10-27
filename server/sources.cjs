@@ -1,7 +1,7 @@
 const fs=require('node:fs');
 const {extract,parseRecords}=require('./extract.cjs');
 const {createCollectors}=require('./collectors.cjs');
-function createSources({store,vault,getSettings,collectors=createCollectors()}) {
+function createSources({store,vault,getSettings,collectors=createCollectors(),codexAnalyzer}) {
  const active=new Set();const controllers=new Map();
  const fingerprint=s=>JSON.stringify({enabled:s.enabled,scope:s.scope,config:s.config});
  function checkCurrent(source){const current=store.get('sources',source.id);if(!current||fingerprint(current)!==fingerprint(source))throw Error('来源已停用、删除或范围已改变，本次整理已停止，请按新设置重试');return current;}
@@ -16,7 +16,17 @@ function createSources({store,vault,getSettings,collectors=createCollectors()}) 
    if(store.hasMessage(source.id,m)){counts.duplicates++;continue;}
    const messageTime=m.at?new Date(m.at):null;const known=messageTime&&!Number.isNaN(messageTime.getTime());
    const fetchWithSignal=(url,options)=>fetch(url,{...options,...(signal?{signal:options.signal?AbortSignal.any([options.signal,signal]):signal}:{})});
-   const proposal=await extract(m.text,getSettings(),vault,fetchWithSignal,{now:known?messageTime:new Date(),messageTimeKnown:!!known});
+   const analysisSettings=getSettings();const aiFingerprint=JSON.stringify(analysisSettings.ai);let aiMonitor;let analysisController;
+   const checkAnalysis=()=>{if(analysisSettings.ai?.mode==='codex'&&JSON.stringify(getSettings().ai)!==aiFingerprint)throw Error('任务分析方式或授权已改变，本次整理已停止，请按新设置重试');};
+   let proposal;
+   try{
+    if(analysisSettings.ai?.mode==='codex'){
+     analysisController=new AbortController();aiMonitor=setInterval(()=>{try{checkAnalysis();}catch{analysisController.abort();}},250);aiMonitor.unref?.();
+    }
+    const analysisSignal=analysisController?(signal?AbortSignal.any([signal,analysisController.signal]):analysisController.signal):signal;
+    proposal=await extract(m.text,analysisSettings,vault,fetchWithSignal,{now:known?messageTime:new Date(),messageTimeKnown:!!known,codexAnalyzer,signal:analysisSignal});
+    checkAnalysis();
+   }finally{if(aiMonitor)clearInterval(aiMonitor);}
    if(signal?.aborted)throw Object.assign(Error('本次采集已取消'),{collectorStatus:'cancelled'});
    checkCurrent(source);
    const result=store.importMessage(source,m,proposal,targetTaskId);

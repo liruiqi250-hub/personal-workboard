@@ -20,6 +20,7 @@ async function setup(t, handler, overrides = {}) {
     async set() {}, async delete() {} };
   const calls = [];
   const client = WechatClient({ vault, ...overrides, fetch: async (url, options) => {
+    if (/\/msg\/notify(?:start|stop)$/.test(url)) return json({ ret: 0 });
     if (url.endsWith('getupdates')) return waiting(options.signal);
     const call = { url, options, body: typeof options.body === 'string' ? JSON.parse(options.body) : options.body };
     calls.push(call);
@@ -42,6 +43,88 @@ function checkError(expected) {
     return true;
   };
 }
+
+async function setupSendResponse(t, response) {
+  return setup(t, call => {
+    if (call.url.endsWith('getuploadurl')) return json({ upload_param: 'U' });
+    if (call.url.includes('/c2c/upload?')) return new Response('', { headers: { 'x-encrypted-param': 'D' } });
+    assert.ok(call.url.endsWith('sendmessage'));
+    return response();
+  });
+}
+function assertPrivateSendError(error, client) {
+  const visible = JSON.stringify({ error: { ...error, message: error.message }, status: client.status() });
+  for (const secret of ['FILE_TEST_SECRET', 'CONTEXT_SECRET', 'SEND_RESPONSE_PRIVATE_MARKER']) {
+    assert.ok(!visible.includes(secret), '公开错误和连接状态不能回显凭据或服务器原始错误正文');
+  }
+  return true;
+}
+
+test('文字与文件发送兼容有效无错误JSON，区分HTTP确认和API成功码且已读仍未知', async t => {
+  const cases = [
+    { value: {}, confirmation: 'http_success_no_error_code' },
+    { value: { errcode: 0 }, confirmation: 'api_success_code' },
+    { value: { ret: 0 }, confirmation: 'api_success_code' },
+    { value: { ret: 0, errcode: 0 }, confirmation: 'api_success_code' }
+  ];
+  for (const scenario of cases) {
+    const { client, calls } = await setupSendResponse(t, () => json(scenario.value));
+    const text = await client.sendText({ text: '确认回执测试', clientId: 'text-confirmation' });
+    assert.equal(text.accepted, true); assert.equal(text.deliveryStatus, 'server_accepted');
+    assert.equal(text.readStatus, 'unknown'); assert.equal(text.confirmation, scenario.confirmation);
+    const file = await client.sendFile({ bytes: Buffer.from('confirmation fixture'), filename: '回执测试.txt', clientId: 'file-confirmation' });
+    assert.equal(file.accepted, true); assert.equal(file.uploaded, true); assert.equal(file.phase, 'accepted');
+    assert.equal(file.deliveryStatus, 'server_accepted'); assert.equal(file.readStatus, 'unknown');
+    assert.equal(file.confirmation, scenario.confirmation);
+    assert.equal(calls.filter(call => call.url.endsWith('sendmessage')).length, 2, '每种发送仅提交一次，不为补回执自动重发');
+    assert.equal(client.status().textSendVerified, true); assert.equal(client.status().fileSendVerified, true);
+    const visible = JSON.stringify({ text, file, status: client.status() });
+    assert.ok(!visible.includes('FILE_TEST_SECRET') && !visible.includes('CONTEXT_SECRET'));
+    await client.stop();
+  }
+});
+
+test('文字与文件发送显式非零ret或errcode始终拒绝，零码不能覆盖另一错误码且不回显原始错误', async t => {
+  for (const value of [
+    { ret: 7, errmsg: 'SEND_RESPONSE_PRIVATE_MARKER' },
+    { errcode: 7, errmsg: 'SEND_RESPONSE_PRIVATE_MARKER' },
+    { ret: 0, errcode: 7, errmsg: 'SEND_RESPONSE_PRIVATE_MARKER' },
+    { ret: 7, errcode: 0, errmsg: 'SEND_RESPONSE_PRIVATE_MARKER' }
+  ]) {
+    const { client, calls } = await setupSendResponse(t, () => json(value));
+    await assert.rejects(client.sendText('确认拒绝测试'), error => assertPrivateSendError(error, client));
+    await assert.rejects(client.sendFile({ bytes: Buffer.from('body'), filename: '报告.pdf' }), error => {
+      checkError({ phase: 'sending', accepted: false, uploaded: true, deliveryStatus: 'server_rejected' })(error);
+      return assertPrivateSendError(error, client);
+    });
+    assert.equal(calls.filter(call => call.url.endsWith('sendmessage')).length, 2);
+    assert.equal(client.status().textSendVerified, false); assert.equal(client.status().fileSendVerified, false);
+    await client.stop();
+  }
+});
+
+test('文字与文件发送拒绝原始空body和非对象JSON，无代码errmsg或未知error不能假accepted', async t => {
+  const cases = [
+    () => new Response(''), () => new Response(' \n\t '), () => json(null), () => json([]), () => json(true),
+    () => json('SEND_RESPONSE_PRIVATE_MARKER'),
+    () => json({ errmsg: 'SEND_RESPONSE_PRIVATE_MARKER' }),
+    () => json({ error: 'SEND_RESPONSE_PRIVATE_MARKER' }),
+    () => json({ error: { message: 'SEND_RESPONSE_PRIVATE_MARKER' } })
+  ];
+  for (const response of cases) {
+    const { client, calls } = await setupSendResponse(t, response);
+    await assert.rejects(client.sendText('不能假成功'), error => assertPrivateSendError(error, client));
+    await assert.rejects(client.sendFile({ bytes: Buffer.from('body'), filename: '报告.pdf' }), error => {
+      assert.equal(error.name, 'WechatFileError'); assert.notEqual(error.accepted, true);
+      assert.notEqual(error.deliveryStatus, 'server_accepted'); assert.equal(error.readStatus, 'unknown');
+      assert.equal(error.uploaded, true); assert.equal(error.phase, 'sending');
+      return assertPrivateSendError(error, client);
+    });
+    assert.equal(calls.filter(call => call.url.endsWith('sendmessage')).length, 2);
+    assert.equal(client.status().textSendVerified, false); assert.equal(client.status().fileSendVerified, false);
+    await client.stop();
+  }
+});
 
 test('文件协议字段、密文字节、MD5/SHA256、PKCS7边界和官方hex文本Base64编码精确一致', async t => {
   const { client, calls } = await setup(t);
@@ -199,12 +282,12 @@ test('上传HTTP4xx明确拒绝；5xx、缺下载头和断网为上传不明，�
   }
 });
 
-test('文件消息明确ret错误/HTTP4xx为拒绝，超时/断网/5xx/缺ret/坏JSON为发送不明，已上传状态保留且不重发', async t => {
+test('文件消息明确ret错误/HTTP4xx为拒绝，超时/断网/5xx/原始空body/坏JSON为发送不明，已上传状态保留且不重发', async t => {
   const cases = [
     { response: () => json({ ret: 7, errmsg: 'reject' }), accepted: false, deliveryStatus: 'server_rejected' },
     { response: () => new Response('', { status: 401 }), accepted: false, deliveryStatus: 'server_rejected' },
     { response: () => new Response('', { status: 503 }), accepted: null, deliveryStatus: 'unknown' },
-    { response: () => json({}), accepted: null, deliveryStatus: 'unknown' },
+    { response: () => new Response(''), accepted: null, deliveryStatus: 'unknown' },
     { response: () => new Response('bad JSON'), accepted: null, deliveryStatus: 'unknown' },
     { response: () => { throw new Error('network'); }, accepted: null, deliveryStatus: 'unknown' },
     { response: () => { throw Object.assign(new Error('timeout'), { name: 'AbortError' }); }, accepted: null, deliveryStatus: 'unknown' }

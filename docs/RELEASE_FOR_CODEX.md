@@ -1,10 +1,12 @@
-# 维护、升级与公开发版 V1.5.0
+# 维护、升级与公开发版 V1.9.0
 
-> 本次预览发行：[v0.3.3](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3)。Windows ZIP为45553813字节，SHA-256 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`；限定更新恢复故障已验，真实业务及界面仍待验。
+> **V0.3.6 开发预览候选（目标为Pre-release、非正式latest）：** 增加通过本机已登录 Codex 账号提取待办。本文记录版本内容；上传、签名、部署和业务验收以实际回执为准，不能从文档推断已发布。
 
-当前为 V0.3.3 开发预览；限定完整部署故障场景已通过独立复核，UPD-RECOVERY-01在新维护入口及已验路径内关闭，旧版冻结维护算法仍有缺口；离线测试与本机部署不代表真实渠道或真人界面验收通过。
+> 目标材料：`v0.3.6`、`personal-workboard-0.3.6-windows-x64.zip` 与干净源码包。安装前在[GitHub发行列表](https://github.com/liruiqi250-hub/personal-workboard/releases)核对实际存在的版本、资产和对应 SHA-256；旧程序、数据快照和旧资产保留。
 
-软件当前 V0.3.3 开发预览；每次变更都递增 `package.json`、锁文件中的版本，更新 README 与 CHANGELOG，保留上一程序及对应数据。真实目标仓库为 https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已作为 Pre-release 发布，非正式 latest；V0.3.2 已按 Pre-release 发布、非正式 latest，并披露 UPD-RECOVERY-01 更新恢复缺口；其tag和原资产保留。V0.3.3 本次作为 Pre-release 发布、非正式 latest；实际资产与校验值见本标签发行页，整体业务仍未验收。发布由维护者统一协调，开发阶段准备干净 stage、版本 ZIP 和明确文件清单，避免并发 push 或创建 Release。
+V0.3.6沿用V0.3.3已通过独立复核的维护实现；完整故障矩阵为V0.3.3历史证据，本次3.6未重跑该矩阵，UPD-RECOVERY-01在新维护入口及已验路径内关闭，旧版冻结维护算法仍有缺口；离线测试与本机部署不代表真实渠道或真人界面验收通过。
+
+软件当前 V0.3.6 开发预览；每次变更都递增 `package.json`、锁文件中的版本，更新 README 与 CHANGELOG，保留上一程序及对应数据。真实目标仓库为 https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已作为 Pre-release 发布，非正式 latest；V0.3.2 已按 Pre-release 发布、非正式 latest，并披露 UPD-RECOVERY-01 更新恢复缺口；其tag和原资产保留。V0.3.3此前作为Pre-release发布、非正式 latest；实际资产与校验值见本标签发行页，整体业务仍未验收。发布由维护者统一协调，开发阶段准备干净 stage、版本 ZIP 和明确文件清单，避免并发 push 或创建 Release。
 
 ## 构建公开部署包
 
@@ -37,14 +39,14 @@ V0.3.2 起默认使用 `sourceMode=project-default`，内置本项目 owner/repo
 
 程序先验证固定协议的 Ed25519 签名，再绑定 owner/repo/channel/version/tag/assetName/platform/URL/SHA-256/bytes/keyId/sequence/createdAt，实际 GitHub Release 和资产也必须一致。ZIP 限 400 MiB，受控 GitHub HTTPS 重定向且有大小/超时上限。持久账本按来源、通道和公钥记录序号与一次性安装票据；安装准备占用票据、重读文件、备份、再次核对后消费。已消费或中断的票据不能自动重放。仅备份阶段明确失败时，需使用者显式重新下载核验后申请新票据，失败记录保留。
 
-### V0.3.3 事务维护与首次迁移
+### V0.3.6 事务维护与首次迁移（沿用V0.3.3机制）
 
-手动维护从可信发行/交接记录取得完整 Windows ZIP 和真实 SHA-256，命令行的 ExpectedVersion 与包内版本在停服前核对。它不替代程序入口的签名验证、预览隔离和持久一次性票据。首次从 V0.3.2 迁移必须使用独立的新可信 V0.3.3 工具目录，旧客户端调用旧 update.ps1 并不能获得新恢复机制。
+手动维护从可信发行/交接记录取得完整 Windows ZIP 和真实 SHA-256，命令行的 ExpectedVersion 与包内版本在停服前核对。它不替代程序入口的签名验证、预览隔离和持久一次性票据。首次从 V0.3.2 迁移必须使用独立的新可信V0.3.6完整工具目录，旧客户端调用旧 update.ps1 并不能获得新恢复机制。
 
-在新工具目录运行；以下变量为已核对的旧目录/端口、新包与可信SHA，完整采集步骤见 [INSTALL_FOR_CODEX.md](INSTALL_FOR_CODEX.md#v033-首次迁移与旧失败记录恢复)：
+在新工具目录运行；以下变量为已核对的旧目录/端口、新包与可信SHA，完整采集步骤见 [INSTALL_FOR_CODEX.md](INSTALL_FOR_CODEX.md#v036-首次迁移与旧失败记录恢复)：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action Update -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PackagePath $newZip -ExpectedSha256 $newSha256 -ExpectedVersion 0.3.3
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action Update -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PackagePath $newZip -ExpectedSha256 $newSha256 -ExpectedVersion 0.3.6
 ```
 
 V0.3.3 的 update.ps1/rollback.ps1 为新 maintenance.ps1 的包装入口。外壳把可信 Node 和两个维护模块复制到程序条目之外的 runner，并核对副本哈希，避免替换仍在执行的 runtime/脚本。先核 ZIP/hash/清单和版本，再核对实例并安全停服。任何破坏性替换前，旧程序必须匹配完整原清单，完整旧程序与数据快照复制并逐文件验证；源码 checkout 或没有有效原 release-manifest 的目录会拒绝，需要受控部署完整 Windows 包并核对原数据后再切换。
@@ -71,7 +73,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action RecoverLegacy -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PreviousDir $legacyPrevious -PackagePath $failedZip -ExpectedSha256 $failedSha256
 ```
 
-原现场、旧metadata和旧快照不被导入步骤改写；新导入目录非空时拒绝覆盖。导入成功后如果回退再次失败，按回执中新 schema2 previousDir 使用 Rollback重试，保留首次回退前状态。总控已用最终冻结ZIP覆盖真实目录内占用、动作/记账间中断、回退失败重试、旧3.2外部首次迁移及旧分裂现场恢复，UPD-RECOVERY-01在新维护入口和已验路径内关闭；旧客户端自动升级、正式stable及真实业务仍待验。
+原现场、旧metadata和旧快照不被导入步骤改写；新导入目录非空时拒绝覆盖。导入成功后如果回退再次失败，按回执中新 schema2 previousDir 使用 Rollback重试，保留首次回退前状态。V0.3.3历史验收中，总控使用该最终冻结ZIP覆盖真实目录内占用、动作/记账间中断、回退失败重试、旧3.2外部首次迁移及旧分裂现场恢复，UPD-RECOVERY-01在新维护入口和已验路径内关闭；旧客户端自动升级、正式stable及真实业务仍待验。
 
 ### 模式、数据与验证边界
 
@@ -110,10 +112,24 @@ node .\scripts\sign-update.cjs sign --zip $zip --version 0.3.3 --tag v0.3.3 --ch
 
 ## 试装转发文案
 
-V0.3.3本次为已发布开发预览，精确文件与SHA见本页开头和实际发行页。V0.3.2已披露UPD-RECOVERY-01，不向已有数据实例转发旧原地升级指令。以下只供预览试装，不是最终业务交付：
+V0.3.6准备作为开发预览发布，精确文件与SHA见本页开头，公开状态以GitHub实际发行记录为准。V0.3.2已披露UPD-RECOVERY-01，不向已有数据实例转发旧原地升级指令。以下只供预览试装，不是最终业务交付：
 
-> 请让Codex从 https://github.com/liruiqi250-hub/personal-workboard 的v0.3.3预览发行读取README、AGENTS和安装指南，下载Windows部署ZIP并核对SHA-256 42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725。全新本机试装与已有V0.3.2外部maintenance首次迁移分别按说明执行；旧失败记录保留现场并按RecoverLegacy核对。本人完成真实账号授权；正式更新、实际页面与三渠道业务仍未整体验收。
+> 先在GitHub发行列表确认v0.3.6确已作为Pre-release公开；未公开时等待维护者。确认后让Codex从 https://github.com/liruiqi250-hub/personal-workboard 的v0.3.6标签读取README、AGENTS和安装指南，下载Windows部署ZIP并核对SHA-256 （从对应发行资产校验文件核对）。全新本机试装和已有数据实例升级分别核对；旧3.2首次迁移使用独立可信新工具的maintenance外部入口，旧失败现场按RecoverLegacy核对。本人完成账号授权，定时/跨日/其它业务另行验收。
 
 
 
 发布还需使用者明确授权和可用的仓库权限。文案示例不代表已经发布、安装或向同事发送。
+
+## V0.3.6 本次发行范围
+
+Windows ZIP保持冻结原件，源码与部署的程序文件逐hash相符；README、AGENTS、安装/发版指南和CHANGELOG五份公开说明仅同步发布及限定验收事实，冻结包内旧候选措辞保留为历史。手动维护的目标版本应明确为0.3.6；从旧3.2首次迁移仍须独立可信完整新工具，不能使用旧脚本。签名清单的实际通道、严格递增序号、字节数和SHA以本次update-manifest.json为准，不重用旧示例的序号。
+
+## V0.3.6 已验与待验
+
+本次V0.3.6已完成279项自动测试和生产构建；本机已登录Codex的固定合成示例实际返回严格待办JSON，无真实来源读取、任务创建或微信发送。Chrome合成桌面/窄屏设置交互及Impeccable检测通过。真实来源分析、Codex遥控编程、实际定时/跨日及完整正式自动更新仍待分别验收。新装和原位升级结果以本次部署回执为准。V0.3.5历史基线已完成255项自动测试和限定本机维护/普通停启。本人确认一轮菜单/连接测试及手动日报收到，程序已读回执仍未知，旧failed/unknown账本保留。列标题/数字的Chrome检查仅使用明确标记的合成示例，不代表真实主数据页面或完整新手向导。实际定时和跨日、文件、工作来源、Codex遥控编程及完整正式自动更新仍未验收。
+
+## Codex 任务分析（V0.3.6）
+
+在“我的设置 → 任务分析方式”选择“Codex 分析（使用本机已登录账号）”。先检测连接，勾选同意将已选来源的消息文字发送到 Codex 服务，再用固定示例测试分析，最后保存。需要安装兼容的 Codex CLI 并由本人登录；不需要填写 API 地址或密钥。分析不更改微信遥控开关，不接管已有 Codex 会话。默认仍为本机规则，升级不会自动切换分析方式。
+
+该模式不是本机离线模型。分析在独立临时目录运行，跳过用户配置及规则，禁用命令、插件、MCP、浏览器和图片等能力，使用 CLI 内建默认模型及已保存登录授权；不继承日常编程的自定义模型或工具配置。不支持受限调用参数的旧 CLI 显示需更新，不回退到放宽权限的调用。失败、取消、超时或格式不合格的消息保留待重试，不自动提交 coding 任务或发送微信。

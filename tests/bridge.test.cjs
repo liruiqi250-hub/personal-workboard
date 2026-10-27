@@ -19,6 +19,7 @@ function memoryVault(initial) {
     async set(key, value) { writes.push({ key, value }); values.set(key, value); }, async delete(key) { values.delete(key); } };
 }
 const json = value => new Response(JSON.stringify(value), { status: 200, headers: { 'content-type': 'application/json' } });
+const lifecycleNotification = url => /\/ilink\/bot\/msg\/notify(?:start|stop)$/.test(url);
 function waiting(signal) {
   return new Promise((resolve, reject) => {
     if (signal.aborted) return reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
@@ -37,6 +38,7 @@ test('微信二维码按需生成；扫码结果只在本机确认后加密绑�
       if (url.includes('get_bot_qrcode')) return json({ qrcode: 'qr-secret', qrcode_img_content: 'https://weixin.qq.com/qr/value' });
       if (url.includes('get_qrcode_status')) return json({ status: 'confirmed', bot_token: 'VERY_SECRET_BOT_TOKEN',
         ilink_bot_id: 'bot-67890', ilink_user_id: 'owner-12345', baseurl: 'https://ilinkai.weixin.qq.com' });
+      if (lifecycleNotification(url)) return json({ ret: 0 });
       return waiting(options.signal);
     } });
   t.after(() => client.disconnect());
@@ -61,6 +63,7 @@ test('微信仅处理绑定本人私聊，持久化游标及去重，回复使�
   const client = WechatClient({ vault, pollDelayMs: 1, onMessage: value => messages.push(value),
     fetch: async (url, options) => {
       const body = options.body && JSON.parse(options.body); calls.push({ url, options, body });
+      if (lifecycleNotification(url)) return json({ ret: 0 });
       if (url.endsWith('getupdates')) {
         polls++;
         if (polls === 1) return json({ ret: 0, msgs: [{ ...owner, from_user_id: 'stranger' }, { ...owner, group_id: 'group' },
@@ -75,7 +78,7 @@ test('微信仅处理绑定本人私聊，持久化游标及去重，回复使�
   assert.equal(messages[0].verifiedOwner, true); assert.equal(messages[0].id, '90071992547409931234');
   const stored = JSON.parse(vault.values.get(VAULT_KEY));
   assert.equal(stored.cursor, 'CURSOR_NEXT'); assert.deepEqual(stored.seen, [owner.message_id]);
-  assert.equal(calls[1].body.get_updates_buf, 'CURSOR_NEXT');
+  assert.equal(calls.filter(value => value.url.endsWith('getupdates'))[1].body.get_updates_buf, 'CURSOR_NEXT');
   assert.equal(client.status().receiving, true); assert.equal(client.status().textSendVerified, false);
   await assert.rejects(client.sendText({ to: 'stranger', text: 'do not send' }), /只能发送/);
   const sent = await client.sendText({ text: '执行已接受', clientId: 'my-exact-send-id' });
@@ -86,6 +89,212 @@ test('微信仅处理绑定本人私聊，持久化游标及去重，回复使�
   assert.equal(send.options.headers.Authorization, 'Bearer VERY_SECRET_BOT_TOKEN');
   assert.equal(client.status().textSendVerified, true);
   await assert.rejects(client.sendFile({ path: 'report.pdf' }), /尚未实现/);
+});
+
+function numericWireMessage(rawId, overrides = {}) {
+  const fields = { from_user_id: 'owner-12345', message_type: 1, context_token: 'NUMERIC_CONTEXT_SECRET',
+    item_list: [{ type: 1, text_item: { text: '相同正文的不同消息' } }], ...overrides };
+  return '{"message_id":' + rawId + ',' + JSON.stringify(fields).slice(1);
+}
+function wireUpdates(messages, cursor) {
+  return new Response('{"ret":0,"msgs":[' + messages.join(',') + '],"get_updates_buf":' + JSON.stringify(cursor) + '}',
+    { headers: { 'content-type': 'application/json' } });
+}
+
+test('微信原始数字64位消息ID不丢失不碰撞，重启后持久去重仍保留新消息', async t => {
+  const vault = memoryVault(credentials()); const firstMessages = []; let firstPolls = 0;
+  const firstIds = ['9007199254740992', '9007199254740993'];
+  const first = WechatClient({ vault, pollDelayMs: 1, onMessage: value => firstMessages.push(value),
+    fetch: async (url, options) => {
+      if (lifecycleNotification(url)) return json({ ret: 0 });
+      assert.ok(url.endsWith('getupdates'), '此测试只允许内存模拟的收取请求');
+      if (++firstPolls === 1) return wireUpdates([
+        numericWireMessage(firstIds[0], { from_user_id: 'stranger' }),
+        numericWireMessage(firstIds[0], { group_id: 'synthetic-group' }),
+        numericWireMessage(firstIds[0], { message_type: 2 }),
+        numericWireMessage(firstIds[0]), numericWireMessage(firstIds[1]), numericWireMessage(firstIds[0])
+      ], 'NUMERIC_CURSOR_1');
+      return waiting(options.signal);
+    } });
+  t.after(() => first.disconnect());
+  await first.start(); await until(() => firstPolls === 2);
+  assert.deepEqual(firstMessages.map(value => value.id), firstIds, '相邻wire整数必须各处理一次，不能丢弃或因Number舍入碰撞');
+  assert.ok(firstMessages.every(value => value.verifiedOwner && value.senderId === 'owner-12345'));
+  let stored = JSON.parse(vault.values.get(VAULT_KEY));
+  assert.deepEqual(stored.seen, firstIds); assert.equal(stored.cursor, 'NUMERIC_CURSOR_1');
+  assert.equal(stored.contextToken, 'NUMERIC_CONTEXT_SECRET'); assert.ok(first.status().lastReceiveAt);
+  await first.stop();
+
+  const secondMessages = []; let secondPolls = 0; const nextId = '9007199254740994';
+  const restarted = WechatClient({ vault, pollDelayMs: 1, onMessage: value => secondMessages.push(value),
+    fetch: async (url, options) => {
+      if (lifecycleNotification(url)) return json({ ret: 0 });
+      assert.ok(url.endsWith('getupdates'));
+      if (++secondPolls === 1) {
+        assert.equal(JSON.parse(options.body).get_updates_buf, 'NUMERIC_CURSOR_1');
+        return wireUpdates([...firstIds.map(id => numericWireMessage(id)), numericWireMessage(nextId)], 'NUMERIC_CURSOR_2');
+      }
+      return waiting(options.signal);
+    } });
+  t.after(() => restarted.disconnect());
+  await restarted.start(); await until(() => secondPolls === 2);
+  assert.deepEqual(secondMessages.map(value => value.id), [nextId], '重启重放旧ID不得再次执行，同正文新ID必须继续接收');
+  stored = JSON.parse(vault.values.get(VAULT_KEY));
+  assert.deepEqual(stored.seen, [...firstIds, nextId]); assert.equal(stored.cursor, 'NUMERIC_CURSOR_2');
+});
+
+test('微信wire解析仅无损保留ID整数，协议数值与字符串正文保持原样', async t => {
+  const content = '正文中的 "message_id":9007199254740993 和转义字符 \\ 不能改写';
+  const raw = '{"ret":0,"message_type":1,"create_time_ms":1792972800000,"ready":true,' +
+    '"message_id":9007199254740993,"item":{"msg_id":18446744073709551615},"safe":{"message_id":42},' +
+    '"alreadyString":{"message_id":"000042"},"text":' + JSON.stringify(content) + '}';
+  const client = WechatClient({ vault: memoryVault(), fetch: async () => new Response(raw) });
+  t.after(() => client.disconnect());
+  const value = await client.request('https://ilinkai.weixin.qq.com', 'ilink/bot/getupdates');
+  assert.equal(value.message_id, '9007199254740993'); assert.equal(value.item.msg_id, '18446744073709551615');
+  assert.equal(value.safe.message_id, '42'); assert.equal(value.alreadyString.message_id, '000042');
+  assert.equal(value.ret, 0); assert.equal(value.message_type, 1); assert.equal(value.create_time_ms, 1792972800000);
+  assert.equal(value.ready, true); assert.equal(value.text, content);
+});
+
+test('微信入站诊断按最新完成轮次计数，区分过滤原因且不泄漏正文ID和token', async t => {
+  const vault = memoryVault(credentials()); const messages = []; let polls = 0; let finishSecondPoll;
+  const bodySecret = 'INBOUND_DIAGNOSTIC_BODY_SECRET';
+  const valid = { item_list: [{ type: 1, text_item: { text: bodySecret } }] };
+  const client = WechatClient({ vault, pollDelayMs: 1, onMessage: value => messages.push(value.id),
+    fetch: async (url, options) => {
+      if (lifecycleNotification(url)) return json({ ret: 0 });
+      assert.ok(url.endsWith('getupdates'));
+      if (++polls === 1) return wireUpdates([
+        numericWireMessage('9007199254740992', { ...valid, from_user_id: 'DIAGNOSTIC_STRANGER_SECRET' }),
+        numericWireMessage('9007199254740992', { ...valid, group_id: 'DIAGNOSTIC_GROUP_SECRET' }),
+        numericWireMessage('9007199254740992', { ...valid, message_type: 2 }),
+        numericWireMessage('9007199254740992', { ...valid, delete_time_ms: 1 }),
+        numericWireMessage('9007199254740992', { item_list: [{ type: 1, text_item: { text: '   ' } }] }),
+        numericWireMessage('1e30', valid),
+        numericWireMessage('9007199254740992', valid), numericWireMessage('9007199254740993', valid),
+        numericWireMessage('9007199254740992', valid)
+      ], 'DIAGNOSTIC_CURSOR_SECRET');
+      if (polls === 2) return new Promise((resolve, reject) => {
+        const abort = () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+        options.signal.addEventListener('abort', abort, { once: true });
+        finishSecondPoll = () => {
+          options.signal.removeEventListener('abort', abort);
+          resolve(wireUpdates([], 'DIAGNOSTIC_CURSOR_2_SECRET'));
+        };
+      });
+      return waiting(options.signal);
+    } });
+  t.after(() => client.disconnect());
+  assert.equal(client.status().lastInboundDiagnostics, null, '尚无完成轮次时不伪造诊断计数');
+  assert.equal(client.status().lastNonEmptyInboundDiagnostics, null);
+  await client.start(); await until(() => polls === 2);
+  assert.deepEqual(messages, ['9007199254740992', '9007199254740993']);
+  const diagnostics = client.status().lastInboundDiagnostics;
+  assert.deepEqual(diagnostics, { received: 9, accepted: 2, ignored: {
+    otherSender: 1, group: 1, nonUser: 1, deleted: 1, invalidText: 1, unsafeMessageId: 1, duplicate: 1
+  } });
+  const nonEmpty = structuredClone(client.status().lastNonEmptyInboundDiagnostics);
+  assert.equal(typeof nonEmpty.at, 'string'); assert.ok(Number.isFinite(Date.parse(nonEmpty.at)));
+  const { at: nonEmptyAt, ...nonEmptyCounts } = nonEmpty;
+  assert.deepEqual(nonEmptyCounts, diagnostics, '最近非空诊断须保留该完成轮次的计数与时间');
+  const visible = JSON.stringify(client.status());
+  for (const secret of [bodySecret, '9007199254740992', '9007199254740993', 'NUMERIC_CONTEXT_SECRET',
+    'DIAGNOSTIC_CURSOR_SECRET', 'DIAGNOSTIC_STRANGER_SECRET', 'DIAGNOSTIC_GROUP_SECRET', 'VERY_SECRET_BOT_TOKEN']) {
+    assert.ok(!visible.includes(secret), '诊断及公开status不能暴露合成敏感值');
+  }
+  finishSecondPoll(); await until(() => polls === 3);
+  assert.deepEqual(client.status().lastInboundDiagnostics, { received: 0, accepted: 0, ignored: {
+    otherSender: 0, group: 0, nonUser: 0, deleted: 0, invalidText: 0, unsafeMessageId: 0, duplicate: 0
+  } }, '新完成空轮次应替换上轮计数，不能累计或伪装仍有新消息');
+  assert.deepEqual(client.status().lastNonEmptyInboundDiagnostics, nonEmpty, '空轮次不能清除或改写最近非空诊断');
+  await client.stop();
+});
+
+test('微信生命周期通知使用标准POST和动态版本头，通知失败仍可收取且停止幂等', async t => {
+  const vault = memoryVault(credentials()); const calls = []; let polls = 0;
+  const client = WechatClient({ vault, pollDelayMs: 1, fetch: async (url, options) => {
+    calls.push({ url, options, body: options.body && JSON.parse(options.body) });
+    if (lifecycleNotification(url)) return json({ ret: 123 }); // Both lifecycle notices can fail without stopping cleanup.
+    assert.ok(url.endsWith('getupdates'));
+    if (++polls === 1) return json({ ret: 0, msgs: [], get_updates_buf: 'LIFECYCLE_CURSOR' });
+    return waiting(options.signal);
+  } });
+  t.after(() => client.disconnect());
+  await client.start(); await until(() => polls === 2);
+  assert.equal(client.status().receiving, true, '启动通知被拒绝仍应继续真实轮询流程');
+  await client.start();
+  await client.stop(); await client.stop();
+  assert.equal(client.status().receiving, false);
+  const notifications = calls.filter(value => lifecycleNotification(value.url));
+  assert.deepEqual(notifications.map(value => value.url.split('/').at(-1)), ['notifystart', 'notifystop']);
+  const version = require('../package.json').version;
+  const [major, minor, patch] = version.split('.').map(Number);
+  const encoded = String(((major & 255) << 16) | ((minor & 255) << 8) | (patch & 255));
+  for (const call of notifications) {
+    assert.equal(call.options.method, 'POST'); assert.equal(call.options.redirect, 'error');
+    assert.equal(call.options.headers['iLink-App-Id'], 'bot');
+    assert.equal(call.options.headers['iLink-App-ClientVersion'], encoded);
+    assert.equal(call.options.headers.Authorization, 'Bearer VERY_SECRET_BOT_TOKEN');
+    assert.deepEqual(call.body, { base_info: { channel_version: version, bot_agent: `PersonalWorkboard/${version}` } });
+  }
+});
+
+test('微信启动通知迟响应不能在停止后开启轮询，停止通知使用独立signal且有界', async t => {
+  const vault = memoryVault(credentials()); let finishStartNotice; let startSignal; let stopSignal; let stopNoticeCount = 0; let polls = 0;
+  const client = WechatClient({ vault, fetch: async (url, options) => {
+    if (url.endsWith('/msg/notifystart')) {
+      startSignal = options.signal;
+      return new Promise(resolve => { finishStartNotice = () => resolve(json({ ret: 0 })); }); // Deliberately ignore abort, emulate a late fetch completion.
+    }
+    if (url.endsWith('/msg/notifystop')) {
+      stopNoticeCount++; stopSignal = options.signal;
+      assert.equal(stopSignal.aborted, false, '停止通知不能复用已取消的接收代次signal');
+      return waiting(options.signal); // It must be aborted by the independent lifecycle timeout.
+    }
+    if (url.endsWith('getupdates')) { polls++; return waiting(options.signal); }
+    throw Error('unexpected route');
+  } });
+  t.after(() => client.disconnect());
+  const starting = client.start(); await until(() => typeof finishStartNotice === 'function');
+  const beganStop = Date.now(); await client.stop();
+  assert.equal(stopNoticeCount, 1); assert.notEqual(stopSignal, startSignal);
+  assert.equal(startSignal.aborted, true); assert.equal(stopSignal.aborted, true);
+  assert.ok(Date.now() - beganStop < 6500, '独立停止通知应在5秒上限附近退出');
+  finishStartNotice(); await starting;
+  assert.equal(polls, 0, '已停止代次收到迟响应后不得恢复poll'); assert.equal(client.status().receiving, false);
+  await client.stop(); assert.equal(stopNoticeCount, 1, '重复停止不得再次提交通知');
+});
+
+test('微信start等待停止通知时并发disconnect不空解引用，也不重新启动轮询', async t => {
+  const vault = memoryVault(credentials()); let polls = 0; let startNotices = 0; let stopNotices = 0; let finishStopNotice;
+  const client = WechatClient({ vault, fetch: async (url, options) => {
+    if (url.endsWith('/msg/notifystart')) { startNotices++; return json({ ret: 0 }); }
+    if (url.endsWith('/msg/notifystop')) {
+      stopNotices++;
+      return new Promise((resolve, reject) => {
+        const abort = () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+        options.signal.addEventListener('abort', abort, { once: true });
+        finishStopNotice = () => {
+          options.signal.removeEventListener('abort', abort);
+          resolve(json({ ret: 0 }));
+        };
+      });
+    }
+    assert.ok(url.endsWith('getupdates')); polls++;
+    return waiting(options.signal); // Initial poll is still in flight, so receiving remains false.
+  } });
+  t.after(() => client.disconnect());
+  await client.start(); await until(() => polls === 1);
+  assert.equal(client.status().receiving, false);
+  const restarting = client.start(); await until(() => typeof finishStopNotice === 'function');
+  const disconnecting = client.disconnect();
+  finishStopNotice();
+  const results = await Promise.allSettled([restarting, disconnecting]);
+  assert.ok(results.every(value => value.status === 'fulfilled'), '并发断开使凭据失效时，迟到的start应安全返回');
+  assert.equal(polls, 1); assert.equal(startNotices, 1); assert.equal(stopNotices, 1);
+  assert.equal(client.status().connected, false); assert.equal(client.status().controllerBound, false);
+  assert.equal(client.status().receiving, false); assert.equal(vault.values.size, 0);
 });
 
 test('微信错误不伪造接入，未建立本人会话不能发送，凭据地址不能跳转到任意站点', async t => {
@@ -261,6 +470,7 @@ test('微信收到数字验证码要求时仍需本机最终确认；空发送�
         if (!url.includes('verify_code=123456')) return json({ status: 'need_verifycode' });
         return json({ status: 'confirmed', bot_token: 'secret', ilink_bot_id: 'bot', ilink_user_id: 'owner-12345' });
       }
+      if (lifecycleNotification(url)) return json({ ret: 0 });
       return waiting(options.signal);
     } });
   t.after(() => client.disconnect());
@@ -272,7 +482,7 @@ test('微信收到数字验证码要求时仍需本机最终确认；空发送�
   await client.confirm(); assert.equal(client.status().controllerBound, true);
   assert.ok(qrQueries.some(value => value.includes('verify_code=123456')));
   client.credentials.contextToken = 'test-context';
-  client.fetch = async () => json({});
-  await assert.rejects(client.sendText('hello'), /未明确确认/);
+  client.fetch = async () => new Response('');
+  await assert.rejects(client.sendText('hello'), /响应格式无法确认/);
   assert.equal(client.status().textSendVerified, false);
 });

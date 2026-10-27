@@ -1,16 +1,18 @@
-# 交给 Codex 的本机安装说明 V1.5.0
+# 交给 Codex 的本机安装说明 V1.9.0
 
-> 本次预览发行：[v0.3.3](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3)。Windows ZIP为45553813字节，SHA-256 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`；限定更新恢复故障已验，真实业务及界面仍待验。
+> **V0.3.6 开发预览候选（目标为Pre-release、非正式latest）：** 增加通过本机已登录 Codex 账号提取待办。本文记录版本内容；上传、签名、部署和业务验收以实际回执为准，不能从文档推断已发布。
+
+> 目标材料：`v0.3.6`、`personal-workboard-0.3.6-windows-x64.zip` 与干净源码包。安装前在[GitHub发行列表](https://github.com/liruiqi250-hub/personal-workboard/releases)核对实际存在的版本、资产和对应 SHA-256；旧程序、数据快照和旧资产保留。
 
 > **V0.3.2 已知更新恢复缺口（UPD-RECOVERY-01）：** 被占用的子文件可能使旧程序目录只移动一部分，旧回退记录会漏记该目录。V0.3.2 仍为已发布的 Pre-release、非正式 latest，原冻结包保留。V0.3.3 已按开发预览发布，限定完整部署故障场景经独立复核通过；已有数据实例的首次迁移和旧失败记录恢复使用本指南的新可信外部维护入口，不能调用旧 V0.3.2 的 update.ps1 代替。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
 
-当前软件为 V0.3.3 开发预览；V0.3.2 已发布为 Pre-release、非正式 latest，并保留 UPD-RECOVERY-01 披露。离线测试、签名验证和部署不代表真实渠道或真人界面验收通过。
+当前代码为 V0.3.6 开发预览，既有V0.3.3及更早发行保留；V0.3.2 已发布为 Pre-release、非正式 latest，并保留 UPD-RECOVERY-01 披露。离线测试、签名验证和部署不代表真实渠道或真人界面验收通过。
 
-目标：在使用者自己的 Windows x64 电脑上运行个人待办事项看板。每人一个独立数据目录，打开浏览器使用。本文不要求 Docker、Electron、公网域名或云服务器。本次明确选择 v0.3.3 预览发行页和对应校验值，旧版及已知缺口说明继续保留；首次迁移使用新可信外部工具，不直接调用旧V0.3.2脚本。
+目标：在使用者自己的 Windows x64 电脑上运行个人待办事项看板。每人一个独立数据目录，打开浏览器使用。本文不要求 Docker、Electron、公网域名或云服务器。发布后明确选择实际存在的v0.3.6预览发行及对应校验值，旧版及已知缺口说明继续保留；首次迁移使用新可信外部工具，不直接调用旧V0.3.2脚本。
 
 ## 先确认下载材料
 
-目标公开仓库为 https://github.com/liruiqi250-hub/personal-workboard ，owner=liruiqi250-hub，repo=personal-workboard。[V0.3.3 预览发行页](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3) 提供含 Node 的 `personal-workboard-0.3.3-windows-x64.zip`，45553813字节，SHA-256为 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`，以及需另行构建的源码包。核对实际预览状态、版本及校验；不能把全新试装或外部手动迁移当作旧客户端自动升级。
+目标公开仓库为 https://github.com/liruiqi250-hub/personal-workboard ，owner=liruiqi250-hub，repo=personal-workboard。[GitHub发行列表](https://github.com/liruiqi250-hub/personal-workboard/releases)中实际存在的v0.3.6预览发行 提供含Node的 `personal-workboard-0.3.6-windows-x64.zip`，大小与 SHA-256 以该发行的校验文件为准，以及需另行构建的源码包。核对实际预览状态、版本和校验，不把外部手动维护当作旧客户端完整自动更新。
 
 在下载后、解压前用 `Get-FileHash -Algorithm SHA256` 与可信发行记录比对。`.sha256` 与 ZIP 从同一未知来源取得只能用于检测传输损坏，不能证明发行者身份。完整解压后，程序根目录应包含 `package.json`、`server`、`dist`、`scripts` 和 `release-manifest.json`；部署包还包含 `node_modules`。
 
@@ -55,30 +57,30 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\stop.ps1
 
 报告原件位于软件“设置→报告保存文件夹”，默认独立数据目录的“报告”；下载副本由浏览器设置决定。HTML/Word 不依赖 PDF 打印，PDF 需要 Edge 或 Chrome。数据库与 Windows DPAPI 凭据留在本机，跨电脑迁移需要重新登录。
 
-V0.3.3 开发预览未提供公网访问、跨机同步、系统服务注册、开机自启安装器或桌面 EXE。真实账户、第三方接口或当次更新链路没有验证时，保留“待配置/未验证”，不将手动导入结果冒充自动采集。最后用中文报告：已完成项、健康与实际交互证据、数据和报告位置、待用户扫码或授权项、可用的启动/停止方法。
+V0.3.6开发预览未提供公网访问、跨机同步、系统服务注册、开机自启安装器或桌面 EXE。真实账户、第三方接口或当次更新链路没有验证时，保留“待配置/未验证”，不将手动导入结果冒充自动采集。最后用中文报告：已完成项、健康与实际交互证据、数据和报告位置、待用户扫码或授权项、可用的启动/停止方法。
 
-## V0.3.3 首次迁移与旧失败记录恢复
+## V0.3.6 首次迁移与旧失败记录恢复
 
-V0.3.3本次作为开发预览发布，以下维护入口已通过总控限定完整故障场景及旧版首次迁移核验；每次实际操作仍需核对实例、资料和回执。V0.3.2 原包、原数据与备份均保留。已有数据实例不能把旧 V0.3.2 的原地 update.ps1/rollback.ps1 当作本次修复入口。
+以下入口沿用V0.3.3历史已验的完整故障机制；V0.3.5已直接验证限定新装、升级与普通停启，本次新增分析功能需另行验收，未重跑完整维护故障矩阵；每次实际操作仍需核对实例、资料和回执。V0.3.2 原包、原数据与备份均保留。已有数据实例不能把旧 V0.3.2 的原地 update.ps1/rollback.ps1 当作本次修复入口。
 
-先取得维护者提供的完整可信 V0.3.3 Windows ZIP 与明确 SHA-256，核对后解压到与旧程序、旧数据相互独立的新工具目录。工具目录应包含 maintenance.ps1、maintenance-engine.cjs、maintenance-legacy.cjs 和可用 Node；不能只拷一个脚本到旧目录。在新工具目录打开 PowerShell。下列旧路径和端口应从原 service.json 与实际实例核对，不能根据示例猜测。
+先取得维护者提供的完整可信V0.3.6 Windows ZIP 与明确 SHA-256，核对后解压到与旧程序、旧数据相互独立的新工具目录。工具目录应包含 maintenance.ps1、maintenance-engine.cjs、maintenance-legacy.cjs 和可用 Node；不能只拷一个脚本到旧目录。在新工具目录打开 PowerShell。下列旧路径和端口应从原 service.json 与实际实例核对，不能根据示例猜测。
 
-### 从 V0.3.2 迁移到 V0.3.3
+### 从V0.3.2迁移到V0.3.6
 
 ```powershell
 $oldProgram = (Resolve-Path -LiteralPath (Read-Host '旧V0.3.2程序目录绝对路径')).Path
 $oldData = (Resolve-Path -LiteralPath (Read-Host '原DataDir绝对路径')).Path
 $oldPort = [int](Read-Host '原service.json记录的端口，通常18327')
-$newZip = (Resolve-Path -LiteralPath (Read-Host '完整V0.3.3 Windows ZIP绝对路径')).Path
-$newSha256 = (Read-Host '可信交接记录中的V0.3.3 ZIP 64位SHA-256').Trim()
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action Update -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PackagePath $newZip -ExpectedSha256 $newSha256 -ExpectedVersion 0.3.3
+$newZip = (Resolve-Path -LiteralPath (Read-Host '完整V0.3.6 Windows ZIP绝对路径')).Path
+$newSha256 = (Read-Host '可信交接记录中的V0.3.6 ZIP 64位SHA-256').Trim()
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\maintenance.ps1 -Action Update -ProgramDir $oldProgram -DataDir $oldData -Port $oldPort -PackagePath $newZip -ExpectedSha256 $newSha256 -ExpectedVersion 0.3.6
 ```
 
 该命令使用新可信工具，而不是调用旧 update.ps1。它先核对 ZIP 和内部清单、严格升版及实例，安全停服后建立完整可验证旧程序和数据快照，再开始事务替换；维护 runner 使用独立 Node 副本。按输出回执检查 completed:true，重新核对 health 的版本/实例/模式及任务、设置、报告。若使用 -NoStart，只完成离线文件和数据维护，未验证服务重启，还要实际启动核对。
 
 ### 恢复已生成的旧 needs-rollback
 
-保留旧 .workboard-previous、.workboard-updates、分裂程序目录和原数据。找到旧 update-metadata.json 所在目录；ZIP 是当时失败目标的原部署包，不一定是 V0.3.3。ExpectedSha256 从可信发行记录取得，外壳会同时要求与旧记录 packageSha256 相符。
+保留旧 .workboard-previous、.workboard-updates、分裂程序目录和原数据。找到旧 update-metadata.json 所在目录；ZIP 是当时失败目标的原部署包，不一定是本次V0.3.6。ExpectedSha256 从可信发行记录取得，外壳会同时要求与旧记录 packageSha256 相符。
 
 ```powershell
 $oldProgram = (Resolve-Path -LiteralPath (Read-Host '旧失败程序目录绝对路径')).Path
@@ -159,3 +161,13 @@ config.collector = {
 只回传首次登记报告、完整结果文字文件及本轮成功 fileChange 明确新增/修改的受支持文件，不扫描项目、不解析聊天里的任意路径作为产物。发送前重新检查 realpath、当前项目授权、文件类型、20 MiB 上限和首次登记 SHA-256。完整文字软件上限4 MiB，超过明确报错保留本机受管结果，不静默截断。报告摘要与文件分别发送。未知发送必须本人核对，人工重试只补未接受分段；旧审批通知永不重试。主进程退出后的 uploading/sending 状态保守恢复为待核对，不能重启即重发。
 
 本预览继承已配置的默认 GitHub 仓库与公钥；实际签名下载、安装、重启与回退仍分别记录当次证据，不能跳过验签。发布由维护者统一协调。给同事的最终提示使用真实仓库、实际发布并验收的版本与校验值，当前文档不构成正式安装成功声明。
+
+## V0.3.6 已验与待验
+
+本次V0.3.6已完成279项自动测试和生产构建；本机已登录Codex的固定合成示例实际返回严格待办JSON，无真实来源读取、任务创建或微信发送。Chrome合成桌面/窄屏设置交互及Impeccable检测通过。真实来源分析、Codex遥控编程、实际定时/跨日及完整正式自动更新仍待分别验收。新装和原位升级结果以本次部署回执为准。V0.3.5历史基线已完成255项自动测试和限定本机维护/普通停启。本人确认一轮菜单/连接测试及手动日报收到，程序已读回执仍未知，旧failed/unknown账本保留。列标题/数字的Chrome检查仅使用明确标记的合成示例，不代表真实主数据页面或完整新手向导。实际定时和跨日、文件、工作来源、Codex遥控编程及完整正式自动更新仍未验收。
+
+## Codex 任务分析（V0.3.6）
+
+在“我的设置 → 任务分析方式”选择“Codex 分析（使用本机已登录账号）”。先检测连接，勾选同意将已选来源的消息文字发送到 Codex 服务，再用固定示例测试分析，最后保存。需要安装兼容的 Codex CLI 并由本人登录；不需要填写 API 地址或密钥。分析不更改微信遥控开关，不接管已有 Codex 会话。默认仍为本机规则，升级不会自动切换分析方式。
+
+该模式不是本机离线模型。分析在独立临时目录运行，跳过用户配置及规则，禁用命令、插件、MCP、浏览器和图片等能力，使用 CLI 内建默认模型及已保存登录授权；不继承日常编程的自定义模型或工具配置。不支持受限调用参数的旧 CLI 显示需更新，不回退到放宽权限的调用。失败、取消、超时或格式不合格的消息保留待重试，不自动提交 coding 任务或发送微信。

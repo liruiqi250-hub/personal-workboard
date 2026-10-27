@@ -1,12 +1,14 @@
-# Codex 安装与维护约定 V1.5.0
+# Codex 安装与维护约定 V1.9.0
 
-> 本次预览发行：[v0.3.3](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3)。Windows ZIP为45553813字节，SHA-256 `42702c7c357477bb39074fe6f7f3762d5dd097eaaaf02ba96faf366997de5725`；限定更新恢复故障已验，真实业务及界面仍待验。
+> **V0.3.6 开发预览候选（目标为Pre-release、非正式latest）：** 增加通过本机已登录 Codex 账号提取待办。本文记录版本内容；上传、签名、部署和业务验收以实际回执为准，不能从文档推断已发布。
+
+> 目标材料：`v0.3.6`、`personal-workboard-0.3.6-windows-x64.zip` 与干净源码包。安装前在[GitHub发行列表](https://github.com/liruiqi250-hub/personal-workboard/releases)核对实际存在的版本、资产和对应 SHA-256；旧程序、数据快照和旧资产保留。
 
 > **V0.3.2 已知更新恢复缺口（UPD-RECOVERY-01）：** 被占用的子文件可能使旧程序目录只移动一部分，旧回退记录会漏记该目录。V0.3.2 仍为已发布的 Pre-release、非正式 latest，原冻结包保留。V0.3.3 已按开发预览发布，限定完整部署故障场景经独立复核通过；已有数据实例的首次迁移和旧失败记录恢复使用本指南的新可信外部维护入口，不能调用旧 V0.3.2 的 update.ps1 代替。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
 
-目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2 本次按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。V0.3.3 本次按 Pre-release 发布、非正式 latest，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3 。本文件不授权发布。
+目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2此前按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。V0.3.3此前按Pre-release发布、非正式 latest，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3 。V0.3.6准备以v0.3.6标签发布，实际状态请核对GitHub发行列表。本文件不授权发布。
 
-当前软件为 V0.3.3 开发预览。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
+当前代码为 V0.3.6 开发预览，既有V0.3.3及更早发行保留。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
 
 所有用户沟通使用中文。软件每次变更都递增版本号，更新 CHANGELOG，保留可回退的上一程序及对应数据快照。UI 改动优先使用已安装的 Impeccable 技能，复用现有 Ant Design 组件，运行实际页面并检查中文、布局、溢出、主要状态与 Impeccable 检测结果。
 
@@ -39,7 +41,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose.ps1
 
 ## 升级和回退
 
-先读 `docs/RELEASE_FOR_CODEX.md`。只接受已核验 ZIP 或真实 GitHub 仓库的发行资产，`ExpectedSha256` 必填。没有正式仓库地址时不得编造远端、发行链接或宣称已发布。V0.3.3 维护入口在替换前完成旧程序及数据快照的逐文件哈希核对，使用写前事务日志；更新和回退均保留完整原件与首次回退前数据，失败重试不消费快照。总控最终ZIP限定故障验收已通过，该缺口在新维护入口及已验路径内关闭；不扩大到旧3.2算法、正式自动更新或真实业务验收。
+先读 `docs/RELEASE_FOR_CODEX.md`。只接受已核验 ZIP 或真实 GitHub 仓库的发行资产，`ExpectedSha256` 必填。没有正式仓库地址时不得编造远端、发行链接或宣称已发布。V0.3.3 维护入口在替换前完成旧程序及数据快照的逐文件哈希核对，使用写前事务日志；更新和回退均保留完整原件与首次回退前数据，失败重试不消费快照。V0.3.3历史最终ZIP的限定完整故障验收已通过，该缺口在新维护入口及已验路径内关闭；不扩大到旧3.2算法、正式自动更新或真实业务验收。
 
 V0.3.2 起默认 `sourceMode=project-default`，使用 `public/update-trust.json` 里的本项目仓库、公钥和指纹；员工启动不生成维护者密钥。旧设置中明确的自定义仓库/公钥必须保留；旧自定义配置无效时显示配置错误，不能静默抹除或替换。正式通道 `stable` 只接受非草稿、非 Pre-release 的正式发行；`preview` 必须明确固定 `v主.次.修订` 标签。普通主服务只能验签下载预览，不能安装；同版和旧版只能验证，不能降级。
 
@@ -47,7 +49,7 @@ V0.3.2 起默认 `sourceMode=project-default`，使用 `public/update-trust.json
 
 维护者签名只使用显式 `node scripts/sign-update.cjs init/public/sign`。默认私钥封套在项目外 `%LOCALAPPDATA%\PersonalWorkboardPublisher\liruiqi250-hub\personal-workboard`，受当前 Windows 用户 DPAPI 保护；禁止把封套、明文私钥或凭据纳入源码、部署包、日志或诊断。轮换需经已可信版本带入新公钥，错过过渡版本使用可信安装流程，不从未验证网络内容自动替换信任。发布和资产上传由维护者统一协调。
 
-V0.3.2 的首次安全迁移要从独立、可信的 V0.3.3 完整工具目录执行 `maintenance.ps1 -Action Update -ProgramDir <旧程序> -DataDir <原数据> -Port <原端口> -PackagePath <新Windows ZIP> -ExpectedSha256 <可信SHA> -ExpectedVersion 0.3.3`。不能调用旧 V0.3.2 的 update.ps1 后声称已经使用新恢复机制。旧包、原数据和备份均保留。
+V0.3.2 的首次安全迁移要从独立、可信的V0.3.6完整工具目录执行 `maintenance.ps1 -Action Update -ProgramDir <旧程序> -DataDir <原数据> -Port <原端口> -PackagePath <新Windows ZIP> -ExpectedSha256 <可信SHA> -ExpectedVersion 0.3.6`。不能调用旧 V0.3.2 的 update.ps1 后声称已经使用新恢复机制。旧包、原数据和备份均保留。
 
 旧 needs-rollback 用新工具的 `-Action RecoverLegacy -PreviousDir <旧记录目录>`，ZIP 必须是当时失败的目标包，可信 SHA 同时与旧 metadata.packageSha256 相符。恢复依据是旧完整 manifest，组合 source/saved 原件而非旧 moved 成功列表；未知修改、缺失、路径或绑定冲突明确拒绝并保留现场。成功导入后若恢复中断，使用回执中新 schema2 previousDir 的 `-Action Rollback` 重试，不能重新导入后覆盖首次回退前快照。
 
@@ -64,3 +66,13 @@ V0.3.2 的首次安全迁移要从独立、可信的 V0.3.3 完整工具目录�
 Codex 只登记本组件创建的会话。重启活动态待核对，不重发、不恢复审批；明确继续时重新校验同一会话与授权目录。不得导入或接管桌面其他聊天。产出只接受本轮协议成功新增/修改的文件，先登记 hash 再发送；不能根据聊天里提到的路径或扫描整个项目选文件。
 
 微信上传和消息接受分别记录，结果未知不自动重发；人工核对后只重试未接受部分。旧审批通知不可重试。凭据、CDN 下载参数和加密 key 不得进入前端或公开诊断。上游微信读取被强制终止时清理不能保证完成，按上游功能核对敏感临时缓存，不递归删除猜测的用户目录。
+
+## V0.3.6 已验与待验
+
+本次V0.3.6已完成279项自动测试和生产构建；本机已登录Codex的固定合成示例实际返回严格待办JSON，无真实来源读取、任务创建或微信发送。Chrome合成桌面/窄屏设置交互及Impeccable检测通过。真实来源分析、Codex遥控编程、实际定时/跨日及完整正式自动更新仍待分别验收。新装和原位升级结果以本次部署回执为准。V0.3.5历史基线已完成255项自动测试和限定本机维护/普通停启。本人确认一轮菜单/连接测试及手动日报收到，程序已读回执仍未知，旧failed/unknown账本保留。列标题/数字的Chrome检查仅使用明确标记的合成示例，不代表真实主数据页面或完整新手向导。实际定时和跨日、文件、工作来源、Codex遥控编程及完整正式自动更新仍未验收。
+
+## Codex 任务分析（V0.3.6）
+
+在“我的设置 → 任务分析方式”选择“Codex 分析（使用本机已登录账号）”。先检测连接，勾选同意将已选来源的消息文字发送到 Codex 服务，再用固定示例测试分析，最后保存。需要安装兼容的 Codex CLI 并由本人登录；不需要填写 API 地址或密钥。分析不更改微信遥控开关，不接管已有 Codex 会话。默认仍为本机规则，升级不会自动切换分析方式。
+
+该模式不是本机离线模型。分析在独立临时目录运行，跳过用户配置及规则，禁用命令、插件、MCP、浏览器和图片等能力，使用 CLI 内建默认模型及已保存登录授权；不继承日常编程的自定义模型或工具配置。不支持受限调用参数的旧 CLI 显示需更新，不回退到放宽权限的调用。失败、取消、超时或格式不合格的消息保留待重试，不自动提交 coding 任务或发送微信。

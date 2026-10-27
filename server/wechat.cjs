@@ -6,6 +6,21 @@ const API_BASE = 'https://ilinkai.weixin.qq.com';
 const CDN_BASE = 'https://novac2c.cdn.weixin.qq.com/c2c';
 const VAULT_KEY = 'wechat.personal-bot.v1';
 const CHANNEL_VERSION = require('../package.json').version;
+const CLIENT_VERSION = String(CHANNEL_VERSION.split('.').slice(0, 3).reduce((value, part) => (value << 8) | Number(part), 0) >>> 0);
+function parseWechatJson(raw) {
+  return JSON.parse(raw, (key, value, context) => {
+    if ((key === 'message_id' || key === 'msg_id') && typeof value === 'number' && /^-?(?:0|[1-9]\d*)$/.test(context?.source || '')) return context.source;
+    return value;
+  });
+}
+function messageConfirmation(response) {
+  const unknown = () => Object.assign(new Error('微信消息响应无法确认，发送结果待本人核对；本机不会自动重发'), { code: 'WECHAT_SEND_UNCONFIRMED' });
+  if (!response || typeof response !== 'object' || Array.isArray(response)) throw unknown();
+  if (Object.hasOwn(response, 'error') || response.success === false) throw unknown();
+  if (response.ret === 0 || response.errcode === 0) return 'api_success_code';
+  if (response.ret == null && response.errcode == null && (response.errmsg == null || response.errmsg === '')) return 'http_success_no_error_code';
+  throw unknown();
+}
 // Local resource policy, not a claim about Tencent's server-side limit.
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_FILENAME_BYTES = 240;
@@ -64,11 +79,12 @@ class Client {
     this.qrToDataURL = qrToDataURL || ((value, options) => require('qrcode').toDataURL(value, options));
     this.pollDelayMs = pollDelayMs; this.credentials = null; this.pending = null;
     this.mediaTimeoutMs = Number.isFinite(mediaTimeoutMs) && mediaTimeoutMs > 0 ? Math.min(mediaTimeoutMs, 120000) : 60000;
-    this.qr = null; this.controller = null; this.background = null; this.generation = 0;
+    this.qr = null; this.controller = null; this.background = null; this.generation = 0; this.lifecycle = null; this.stopNotice = null;
     this.vaultQueue = Promise.resolve();
     this.state = { status: 'unconfigured', connected: false, receiving: false, ownerMasked: '',
       controllerBound: false, qrDataUrl: '', lastPollAt: '', lastReceiveAt: '', lastSendAt: '',
-      lastError: '', textSendVerified: false, fileSendSupported: true, fileSendVerified: false };
+      lastError: '', textSendVerified: false, fileSendSupported: true, fileSendVerified: false,
+      lastInboundDiagnostics: null, lastNonEmptyInboundDiagnostics: null, lifecycleWarning: '' };
   }
   status() { return { ...this.state, remoteEnabled: this.getSettings()?.wechatRemoteEnabled === true }; }
   emit(patch) {
@@ -82,7 +98,7 @@ class Client {
     signal?.addEventListener('abort', cancel, { once: true });
     if (signal?.aborted) abort.abort();
     const timer = setTimeout(cancel, timeoutMs);
-    const headers = { 'iLink-App-Id': 'bot', 'iLink-App-ClientVersion': '768' };
+    const headers = { 'iLink-App-Id': 'bot', 'iLink-App-ClientVersion': CLIENT_VERSION };
     if (method === 'POST') {
       Object.assign(headers, { 'Content-Type': 'application/json', AuthorizationType: 'ilink_bot_token',
         'X-WECHAT-UIN': Buffer.from(String(randomBytes(4).readUInt32BE())).toString('base64') });
@@ -98,7 +114,9 @@ class Client {
       });
       const raw = await response.text();
       if (raw.length > 2 * 1024 * 1024) throw new Error('微信服务器响应过大');
-      const result = JSON.parse(raw);
+      let result;
+      try { result = parseWechatJson(raw); } catch { throw Object.assign(new Error('微信响应格式无法确认，请核对结果后再决定'), { code: 'WECHAT_RESPONSE_UNCONFIRMED' }); }
+      if (!result || typeof result !== 'object' || Array.isArray(result)) throw Object.assign(new Error('微信响应结构无法确认，请核对结果后再决定'), { code: 'WECHAT_RESPONSE_UNCONFIRMED' });
       if (result.ret === -14 || result.errcode === -14) {
         const error = new Error('微信登录已失效，请在本机重新扫码'); error.code = 'SESSION_EXPIRED'; error.apiRejected = true; throw error;
       }
@@ -118,9 +136,19 @@ class Client {
     const auth = this.credentials;
     if (auth) await this.mutateVault(() => auth === this.credentials ? this.vault.set(VAULT_KEY, JSON.stringify(auth)) : undefined);
   }
+  async notifyLifecycle(kind, auth, signal) {
+    try {
+      await this.request(auth.base, 'ilink/bot/msg/notify' + kind, {
+        token: auth.token, body: { base_info: this.baseInfo() }, signal, timeoutMs: 5000
+      });
+      return true;
+    } catch { return false; }
+  }
   async connect() {
     if (this.credentials) return this.status();
-    await this.stop();
+    const stopping = this.stop(), stoppedGeneration = this.generation;
+    await stopping;
+    if (this.credentials || stoppedGeneration !== this.generation) return this.status();
     const generation = ++this.generation;
     const controller = new AbortController(); this.controller = controller;
     this.pending = null; this.qr = null;
@@ -206,10 +234,16 @@ class Client {
         this.credentials = saved;
       } catch { this.emit({ status: 'error', lastError: '微信加密凭据无效，请重新连接' }); return this.status(); }
     }
-    await this.stop();
+    const auth = this.credentials, stopping = this.stop(), stoppedGeneration = this.generation;
+    await stopping;
+    if (!auth || auth !== this.credentials || stoppedGeneration !== this.generation) return this.status();
     const generation = ++this.generation; const controller = new AbortController(); this.controller = controller;
     this.emit({ status: 'connected', connected: true, controllerBound: true,
-      ownerMasked: mask(this.credentials.owner), qrDataUrl: '', receiving: false, lastError: '' });
+      ownerMasked: mask(auth.owner), qrDataUrl: '', receiving: false, lastError: '' });
+    const lifecycle = { auth, generation }; this.lifecycle = lifecycle;
+    const notified = await this.notifyLifecycle('start', lifecycle.auth, controller.signal);
+    if (generation !== this.generation || controller.signal.aborted || lifecycle.auth !== this.credentials) return this.status();
+    this.emit({ lifecycleWarning: notified ? '' : '微信上线通知未确认，消息轮询仍继续；请核对实际收发' });
     this.background = this.pollMessages(generation, controller.signal).catch(error => {
       if (generation === this.generation && !controller.signal.aborted) {
         this.emit({ status: 'error', receiving: false, connected: error.code !== 'SESSION_EXPIRED',
@@ -228,14 +262,20 @@ class Client {
         if (signal.aborted || generation !== this.generation) return;
         errors = 0;
         this.emit({ status: 'connected', receiving: true, lastPollAt: new Date(this.now()).toISOString(), lastError: '' });
+        const diagnostic = { received: 0, accepted: 0, ignored: { otherSender: 0, group: 0, nonUser: 0, deleted: 0, invalidText: 0, unsafeMessageId: 0, duplicate: 0 } };
         let changed = false;
         for (const msg of Array.isArray(result.msgs) ? result.msgs : []) {
-          if (msg.from_user_id !== auth.owner || msg.group_id || msg.message_type !== 1 || msg.delete_time_ms) continue;
+          diagnostic.received++;
+          if (msg.from_user_id !== auth.owner) { diagnostic.ignored.otherSender++; continue; }
+          if (msg.group_id) { diagnostic.ignored.group++; continue; }
+          if (msg.message_type !== 1) { diagnostic.ignored.nonUser++; continue; }
+          if (msg.delete_time_ms) { diagnostic.ignored.deleted++; continue; }
           const text = (Array.isArray(msg.item_list) ? msg.item_list : [])
             .filter(item => item.type === 1 && typeof item.text_item?.text === 'string').map(item => item.text_item.text).join('\n');
-          if (!text.trim() || text.length > 50000 || (typeof msg.message_id === 'number' && !Number.isSafeInteger(msg.message_id))) continue;
+          if (!text.trim() || text.length > 50000) { diagnostic.ignored.invalidText++; continue; }
+          if (typeof msg.message_id === 'number' && !Number.isSafeInteger(msg.message_id)) { diagnostic.ignored.unsafeMessageId++; continue; }
           const id = String(msg.message_id || msg.client_id || createHash('sha256').update(JSON.stringify(msg)).digest('hex'));
-          if (auth.seen.includes(id)) continue;
+          if (auth.seen.includes(id)) { diagnostic.ignored.duplicate++; continue; }
           if (typeof msg.context_token === 'string' && msg.context_token) auth.contextToken = msg.context_token;
           // Persist before dispatch: if the process dies during a remote task, the same
           // message cannot execute again after restart. Failed dispatch needs a new user command.
@@ -245,9 +285,11 @@ class Client {
           await this.onMessage({ id, messageId: id, senderId: auth.owner, verifiedOwner: true, text,
             receivedAt: new Date(this.now()).toISOString(), source: 'wechat-personal-bot' });
           if (signal.aborted || generation !== this.generation) return;
+          diagnostic.accepted++;
           changed = true;
           this.emit({ lastReceiveAt: new Date(this.now()).toISOString() });
         }
+        this.emit({ lastInboundDiagnostics: diagnostic, ...(diagnostic.received ? { lastNonEmptyInboundDiagnostics: { at: new Date(this.now()).toISOString(), ...diagnostic } } : {}) });
         if (typeof result.get_updates_buf === 'string' && result.get_updates_buf && result.get_updates_buf !== auth.cursor) {
           auth.cursor = result.get_updates_buf; changed = true;
         }
@@ -277,9 +319,9 @@ class Client {
         message_type: 2, message_state: 2, context_token: auth.contextToken,
         item_list: [{ type: 1, text_item: { text: payload.text } }] }, base_info: this.baseInfo()
     } });
-    if (response.ret !== 0) throw new Error('微信服务器未明确确认接收，不能标记发送成功');
+    const confirmation = messageConfirmation(response);
     if (generation === this.generation && auth === this.credentials) this.emit({ lastSendAt: new Date(this.now()).toISOString(), textSendVerified: true });
-    return { accepted: true, clientId, deliveryStatus: 'server_accepted', readStatus: 'unknown' };
+    return { accepted: true, clientId, deliveryStatus: 'server_accepted', confirmation, readStatus: 'unknown' };
   }
   async sendFile(input = {}) {
     const payload = input && typeof input === 'object' ? input : {};
@@ -372,7 +414,7 @@ class Client {
               // Official sender encodes the UTF-8 hex string, not the raw key bytes.
               aes_key: Buffer.from(aeskey.toString('hex'), 'utf8').toString('base64'), encrypt_type: 1 } } }] },
           base_info: this.baseInfo() } });
-      if (response.ret !== 0) throw new Error('微信服务器未明确确认文件消息，发送结果不明');
+      details.confirmation = messageConfirmation(response);
       details.accepted = true; details.deliveryStatus = 'server_accepted'; details.phase = 'accepted';
       if (generation === this.generation && auth === this.credentials) this.emit({
         lastSendAt: new Date(this.now()).toISOString(), fileSendVerified: true });
@@ -398,16 +440,24 @@ class Client {
   }
   async stop() {
     ++this.generation; this.controller?.abort(); this.controller = null;
+    const lifecycle = this.lifecycle; this.lifecycle = null;
     this.emit({ receiving: false });
     // Generation guards prevent a late response from restoring state after disconnect.
     this.background = null;
+    if (lifecycle) {
+      const notice = this.notifyLifecycle('stop', lifecycle.auth);
+      this.stopNotice = notice;
+      await notice;
+      if (this.stopNotice === notice) this.stopNotice = null;
+    } else if (this.stopNotice) await this.stopNotice;
     return this.status();
   }
   async disconnect() {
     await this.stop(); this.credentials = null; this.pending = null; this.qr = null;
     await this.mutateVault(() => this.vault.delete(VAULT_KEY));
     return this.emit({ status: 'unconfigured', connected: false, controllerBound: false, ownerMasked: '',
-      qrDataUrl: '', lastError: '', textSendVerified: false, fileSendVerified: false });
+      qrDataUrl: '', lastError: '', textSendVerified: false, fileSendVerified: false,
+      lastInboundDiagnostics: null, lastNonEmptyInboundDiagnostics: null, lifecycleWarning: '' });
   }
 }
 function WechatClient(options) { return new Client(options); }

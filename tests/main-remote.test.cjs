@@ -2,12 +2,13 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const vm=require('node:vm');const crypto=require('node:crypto');const {createRequire}=require('node:module');
 const mainFile=path.resolve(__dirname,'../server/main.cjs');const baseRequire=createRequire(mainFile);
 function fixture(t,extraEnv={}){
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'workboard-main-remote-'));const data=path.join(dir,'data');const project=path.join(dir,'project');fs.mkdirSync(data);fs.mkdirSync(project);const calls=[];let options;let persistence;const credential=new Map();
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'workboard-main-remote-'));const data=path.join(dir,'data');const project=path.join(dir,'project');fs.mkdirSync(data);fs.mkdirSync(project);const calls=[];let options;let persistence;let analysisCancels=0;const credential=new Map();
  const adapter={result:null,async status(){return {available:false,status:'offline-test'};},listThreads(){return [{id:'t-1',cwd:project,status:'completed'}];},getLastThreadId(){return persistence.load()?.lastThreadId||null;},getResult(id){return id==='t-1'?adapter.result:null;},async run({requestId}){persistence.save({lastThreadId:'t-1',requestId});return {threadId:'t-1'};},async resume(input){calls.push({type:'resume',input});return {threadId:input.threadId};},async interrupt(input){calls.push({type:'interrupt',input});return {interrupted:true};},stop(){}};
  const wechat={status:()=>({status:'connected',controllerBound:true}),stop(){},async sendText(p){calls.push({type:'text',...p});return {accepted:true,clientId:p.clientId};},async sendFile(p){calls.push({type:'file',...p});for(const phase of ['uploading','uploaded','sending'])await p.onProgress?.({phase,uploadStatus:phase==='uploading'?'not_started':'server_accepted'});return {accepted:true,uploaded:true,uploadStatus:'server_accepted',clientId:p.clientId};}};
  let app;
  function load(){
   const module={exports:{}};const mocked=name=>{
+   if(name==='./codex-analyzer.cjs')return {createCodexAnalyzer:()=>({async status(){calls.push({type:'analysis-status'});return {available:true,loggedIn:true,version:'codex-cli synthetic',message:'合成登录态'};},async test({consent}){if(consent!==true)throw Error('请先确认示例分析授权');calls.push({type:'analysis-test'});return {ok:true,proposal:{isTask:true,title:'合成示例',dueDate:'',priority:2,notes:'示例'},message:'固定合成示例完成'};},cancelActive(){analysisCancels++;},stop(){}})};
    if(name==='../server/codex.cjs')return {CodexController:function(value){options=value;persistence=value.persistence;return adapter;}};
    if(name==='../server/wechat.cjs')return {WechatClient:function(){return wechat;}};
    if(name==='./vault.cjs')return {createVault:()=>({has:k=>credential.has(k),get:async k=>credential.get(k),set:async(k,v)=>credential.set(k,v),delete:async k=>credential.delete(k)})};
@@ -19,7 +20,7 @@ function fixture(t,extraEnv={}){
   app=module.exports;
  }
  load();t.after(()=>app.store.close());
- return {dir,data,project,calls,adapter,credential,get app(){return app;},get options(){return options;},async configure(){await app.api('settings.save',{wechatRemoteEnabled:true,allowedProjects:[project],reportDir:path.join(dir,'reports')});},reopen(){app.store.close();load();}};
+ return {dir,data,project,calls,adapter,credential,get app(){return app;},get options(){return options;},get analysisCancels(){return analysisCancels;},async configure(){await app.api('settings.save',{wechatRemoteEnabled:true,allowedProjects:[project],reportDir:path.join(dir,'reports')});},reopen(){app.store.close();load();}};
 }
 test('主路由从持久最近受管会话停止和明确续接，不依赖进程变量',async t=>{const f=fixture(t);await f.configure();await f.app.routeWechat('/codex 合成任务','request-1');f.reopen();await f.app.routeWechat('/停止','stop-1');await f.app.routeWechat('/继续 最近 补充要求','resume-1');assert.equal(f.calls.find(c=>c.type==='interrupt').input.threadId,'t-1');assert.equal(f.calls.find(c=>c.type==='resume').input.threadId,'t-1');});
 test('主程序完成回调保存完整长文并通过登记文件链路回传',async t=>{const f=fixture(t);await f.configure();fs.writeFileSync(path.join(f.project,'产出.txt'),'本轮合成文件');const text='完整工作结果😀'.repeat(1700);f.adapter.result={threadId:'t-1',turnId:'turn-1',cwd:f.project,status:'completed',text,artifacts:[{path:'产出.txt',kind:'add',source:'fileChange',status:'completed'}]};await f.options.onOutput({type:'completed',threadId:'t-1',turnId:'turn-1'});assert.equal(f.app.store.getSetting('lastCodexResult').text,text);const sent=f.calls.filter(c=>c.type==='text');assert(sent.length>2);assert.equal(sent.map(c=>c.text.replace(/^\[\d+\/\d+\]\n/,'')).join(''),text);const files=f.calls.filter(c=>c.type==='file');assert.equal(files.length,2);assert(files.some(c=>c.bytes.toString()===text));assert(files.some(c=>c.filename==='产出.txt'));assert.equal(f.app.outbound.list().transfers.filter(x=>x.status==='accepted').length,3);});
@@ -30,3 +31,23 @@ test('main默认可信公钥无需粘贴，设置重启保留显式custom并可�
 test('main读取遗留坏custom不崩溃不抹值，更新检查在联网前受控拒绝',async t=>{const f=fixture(t);f.app.store.setSetting('settings',{updates:{owner:'legacy-owner',repo:'legacy-board',publicKey:'legacy-invalid-key'}});f.reopen();const settings=f.app.settings();assert.equal(settings.updates.sourceMode,'custom');assert.equal(settings.updates.publicKey,'legacy-invalid-key');assert(settings.updates.configurationError);const b=await f.app.api('bootstrap');assert.equal(b.settings.updates.publicKey,'legacy-invalid-key');await assert.rejects(f.app.api('update.check'),/自定义更新来源配置无效/);await f.app.api('settings.save',{name:'仍可修改与更新无关的设置'});assert.equal(f.app.settings().updates.publicKey,'legacy-invalid-key');});
 test('main只在显式独立数据目录和非默认端口开放预览安装测试',async t=>{const isolatedLocal=fs.mkdtempSync(path.join(os.tmpdir(),'workboard-test-local-'));const f=fixture(t,{LOCALAPPDATA:isolatedLocal,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18338'});assert.equal(f.app.previewUpdateTest,true);assert.equal((await f.app.api('bootstrap')).update.allowPreviewInstall,true);assert.throws(()=>fixture(t,{LOCALAPPDATA:isolatedLocal,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18327'}),/独立数据目录和非18327/);const defaultPath=path.join(isolatedLocal,'PersonalWorkboard');assert.throws(()=>fixture(t,{LOCALAPPDATA:isolatedLocal,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18338',BOARD_DATA_DIR:defaultPath}),/独立数据目录和非18327/);});
 test('main预览测试不接受默认数据目录的联接别名',t=>{const base=fs.mkdtempSync(path.join(os.tmpdir(),'workboard-preview-alias-'));const standard=path.join(base,'PersonalWorkboard');fs.mkdirSync(standard);const alias=path.join(base,'alias');try{fs.symlinkSync(standard,alias,process.platform==='win32'?'junction':'dir');}catch{return t.skip('当前平台不允许创建隔离测试链接');}assert.throws(()=>fixture(t,{LOCALAPPDATA:base,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18338',BOARD_DATA_DIR:alias}),/独立数据目录和非18327/);});
+
+test('Codex 分析设置默认关闭，启用需严格同意，切换保留原服务配置和密钥',async t=>{
+ const f=fixture(t);assert.equal(f.app.settings().ai.mode,'rules');assert.equal(f.app.settings().ai.codexConsent,false);
+ await f.app.api('settings.save',{ai:{mode:'local',baseUrl:'http://127.0.0.1:11434/v1',model:'原模型'},aiKey:'合成旧密钥'});
+ for(const ai of [{mode:'codex'},{mode:'codex',codexConsent:false},{mode:'codex',codexConsent:'true'},{mode:'other'},null,[]])await assert.rejects(f.app.api('settings.save',{ai}),/确认允许|授权设置无效|分析方式|格式不正确/);
+ assert.equal(f.app.settings().ai.mode,'local');
+ await f.app.api('settings.save',{ai:{mode:'codex',codexConsent:true}});
+ assert.equal(f.app.settings().ai.baseUrl,'http://127.0.0.1:11434/v1');assert.equal(f.app.settings().ai.model,'原模型');assert.equal(f.credential.get('ai-key'),'合成旧密钥');
+ f.reopen();assert.equal(f.app.settings().ai.mode,'codex');assert.equal(f.app.settings().ai.codexConsent,true);
+ await f.app.api('settings.save',{ai:{mode:'rules',codexConsent:false}});assert.equal(f.app.settings().ai.codexConsent,false);
+ assert.equal(f.calls.length,0,'保存设置不能触发模型或消息发送');assert.equal(f.analysisCancels,3,'AI设置改变时同步取消在途分析');
+});
+
+test('Codex 检测和固定示例 API 不改变当前模式，不访问遥控任务或真实来源',async t=>{
+ const f=fixture(t);const before=JSON.stringify(f.app.settings());
+ const status=await f.app.api('analysis.codexStatus');assert.equal(status.available,true);assert.equal(status.loggedIn,true);
+ await assert.rejects(f.app.api('analysis.codexTest',{consent:'true',text:'不接受用户文本',prompt:'不接受命令'}),/示例分析授权/);
+ const result=await f.app.api('analysis.codexTest',{consent:true,text:'不接受用户文本',prompt:'不接受命令'});assert.equal(result.ok,true);assert.equal(result.proposal.title,'合成示例');
+ assert.equal(JSON.stringify(f.app.settings()),before);assert.deepEqual(f.calls.map(x=>x.type),['analysis-status','analysis-test']);assert.equal(f.app.store.all('tasks').length,0);assert.equal(f.app.store.all('sources').length,0);
+});

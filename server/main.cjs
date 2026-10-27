@@ -3,6 +3,7 @@ const {createStore}=require('./store.cjs');const {createVault}=require('./vault.
 const {buildReport,exportDocx}=require('../server/reports.cjs');const {WechatClient}=require('../server/wechat.cjs');const {CodexController}=require('../server/codex.cjs');
 const {createManagedCodexStore}=require('./managed-codex-store.cjs');const {createOutbound}=require('./outbound.cjs');
 const {validateWechatCredential}=require('./collectors.cjs');
+const {createCodexAnalyzer}=require('./codex-analyzer.cjs');
 const {resolveUpdateSettings,normalizeUpdateSettings}=require('./update-trust.cjs');
 const pkg=require('../package.json');const VERSION=pkg.version;const PORT=Number(process.env.BOARD_PORT)||18327;const HOST='127.0.0.1';
 const dataDir=path.resolve(process.env.BOARD_DATA_DIR||path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),'PersonalWorkboard'));
@@ -21,13 +22,21 @@ if(require.main===module){
 }
 const reportDefault=path.join(dataDir,'报告');const store=createStore(dataDir);const vault=createVault(dataDir);const token=crypto.randomBytes(32).toString('hex');
 for(const d of store.all('deliveries'))if(d.status==='sending')store.put('deliveries',{...d,status:'unknown',message:'上次服务在发送中退出，结果未知，请核对手机后再决定是否重试'});
-const defaults={name:'',aliases:[],reportDir:reportDefault,reportTime:'17:30',workdays:[1,2,3,4,5],dailyEnabled:false,wechatRemoteEnabled:false,onboardingStep:0,onboardingComplete:false,autoLaunch:false,ai:{mode:'rules',baseUrl:'',model:''},updates:{owner:'liruiqi250-hub',repo:'personal-workboard',publicKey:''},allowedProjects:[]};
+const defaults={name:'',aliases:[],reportDir:reportDefault,reportTime:'17:30',workdays:[1,2,3,4,5],dailyEnabled:false,wechatRemoteEnabled:false,onboardingStep:0,onboardingComplete:false,autoLaunch:false,ai:{mode:'rules',baseUrl:'',model:'',codexConsent:false},updates:{owner:'liruiqi250-hub',repo:'personal-workboard',publicKey:''},allowedProjects:[]};
 function settings(){const saved=store.getSetting('settings',{});return {...defaults,...saved,ai:{...defaults.ai,...saved.ai},updates:resolveUpdateSettings(saved.updates||{})};}
 function submittedUpdateSettings(previous,input){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('更新来源设置格式不正确');
  const merged={...previous,...input};
  if(!Object.hasOwn(input,'sourceMode')&&['owner','repo','publicKey'].some(key=>Object.hasOwn(input,key)&&input[key]!==previous[key]))delete merged.sourceMode;
  return normalizeUpdateSettings(merged);
+}
+function submittedAISettings(previous,input){
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('任务分析设置格式不正确');
+ if(Object.hasOwn(input,'codexConsent')&&typeof input.codexConsent!=='boolean')throw Error('Codex 分析授权设置无效');
+ const merged={...previous,...input};
+ if(!['rules','local','cloud','codex'].includes(merged.mode))throw Error('请选择支持的任务分析方式');
+ if(merged.mode==='codex'&&merged.codexConsent!==true)throw Error('请先确认允许将所选消息文字发送到 Codex 服务');
+ return merged;
 }
 function safeLog(kind,data){store.log(kind,data);}
 async function onCodexOutput(event){
@@ -52,7 +61,8 @@ const codex=new CodexController({getSettings:settings,persistence:createManagedC
 const seenInbound=new Set();
 const wechat=new WechatClient({vault,getSettings:settings,onStatus:s=>{store.setSetting('wechatStatus',{...s,qrDataUrl:undefined,qrcode:undefined});},onMessage:async m=>{const id=m.id||m.messageId;const ledger='wechat-input:'+crypto.createHash('sha256').update(String(m.senderId)+':'+String(id)).digest('hex');if(!m.verifiedOwner||seenInbound.has(id)||store.getSetting(ledger,null))return;store.setSetting(ledger,{at:new Date().toISOString(),state:'received'});seenInbound.add(id);if(seenInbound.size>1000)seenInbound.delete(seenInbound.values().next().value);try{await routeWechat(m.text,id);store.setSetting(ledger,{at:new Date().toISOString(),state:'routed'});}catch(e){store.setSetting(ledger,{at:new Date().toISOString(),state:'failed',message:e.message});await wechat.sendText({text:e.message}).catch(()=>{});}}});
 const outbound=createOutbound({store,wechat,getSettings:settings,dataDir});
-const sources=createSources({store,vault,getSettings:settings});
+const codexAnalyzer=createCodexAnalyzer();
+const sources=createSources({store,vault,getSettings:settings,codexAnalyzer});
 async function saveSource(input){
  if(input.wechatKeys!==undefined&&typeof input.wechatKeys!=='string')throw Error('离线逐库密钥应为 JSON 文本，请勿放入来源配置');
  const id=input.id||crypto.randomUUID();const old=store.get('sources',id)||{};const platform=input.platform||old.platform;
@@ -92,7 +102,7 @@ async function backup(){const dir=path.join(dataDir,'backups');fs.mkdirSync(dir,
 const updater=createUpdates({version:VERSION,dataDir,getSettings:settings,backup,allowPreviewInstall:previewUpdateTest,persistence:{load:()=>store.getSetting('trusted-update-ledger-v1',null),save:value=>store.setSetting('trusted-update-ledger-v1',value)}});
 let updateLaunchPending=false;
 async function sendReport(id,{scheduled=false}={}){const report=store.get('reports',id);if(!report)throw Error('请先生成报告');const prior=store.all('deliveries').find(d=>d.reportId===id&&['accepted','unknown','sending'].includes(d.status));if(prior)throw Error('这份报告已有发送记录，请先核对，避免重复发送');const delivery={id:crypto.randomUUID(),reportId:id,date:report.endDate,revision:report.revision,createdAt:new Date().toISOString(),status:'sending',scheduled};store.put('deliveries',delivery);
- try{const result=await wechat.sendText({text:report.summary});const next={...delivery,status:'accepted',message:'微信接口已接受；本程序未取得用户已读回执',acceptedAt:new Date().toISOString(),result:result?.messageId?{messageId:result.messageId}:undefined};store.put('deliveries',next);return next;}catch(e){const next={...delivery,status:'unknown',message:'发送结果需核对：'+e.message};store.put('deliveries',next);throw Error(next.message);}}
+ try{const result=await wechat.sendText({text:report.summary});const next={...delivery,status:'accepted',confirmation:result.confirmation,message:result.confirmation==='http_success_no_error_code'?'微信接口返回成功且未给出业务码；手机送达需本人核对':'微信接口已接受；本程序未取得用户已读回执',acceptedAt:new Date().toISOString(),result:result?.messageId?{messageId:result.messageId}:undefined};store.put('deliveries',next);return next;}catch(e){const next={...delivery,status:'unknown',message:'发送结果需核对：'+e.message};store.put('deliveries',next);throw Error(next.message);}}
 async function routeWechat(text,requestId=crypto.randomUUID()){const t=String(text||'').trim();if(/^(你好|帮助|菜单|\/help)$/.test(t))return wechat.sendText({text:'可以问我：今天待办、日报、周报。\n遥控需在本机开启并选择允许项目：/codex 任务内容\n/停止、/同意 审批码、/拒绝 审批码。'});
  if(/^(今天待办|今日待办|今天还有哪些事情没做[？?]?)$/.test(t)){const tasks=store.all('tasks').filter(x=>!x.deletedAt&&!x.example&&x.status!=='done');return wechat.sendText({text:tasks.length?tasks.slice(0,30).map((x,i)=>`${i+1}. ${x.title}${x.dueDate?'（'+x.dueDate+'）':''}`).join('\n'):'当前没有已记录的未完成事项。消息来源覆盖请在本机查看。'});}
  if(/^(日报|周报)$/.test(t))return wechat.sendText({text:preview(t==='日报'?'daily':'weekly').summary});
@@ -118,7 +128,7 @@ async function api(method,p={}) {
  case 'task.patch':return store.patchTask(p.id,p);
  case 'task.delete':return store.deleted(p.id);
  case 'task.restore':return store.deleted(p.id,true);
- case 'settings.save':{const old=settings();const valid={};for(const k of Object.keys(defaults))if(k in p)valid[k]=p[k];if(valid.reportTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(valid.reportTime))throw Error('提醒时间格式应为 09:00');if(valid.workdays&&!valid.workdays.every(x=>Number.isInteger(x)&&x>=0&&x<7))throw Error('工作日无效');if(valid.allowedProjects){valid.allowedProjects=valid.allowedProjects.map(x=>path.resolve(x));for(const d of valid.allowedProjects)if(!fs.existsSync(d)||!fs.statSync(d).isDirectory())throw Error('所选工作项目目录不存在');}if(valid.reportDir){valid.reportDir=path.resolve(valid.reportDir);fs.mkdirSync(valid.reportDir,{recursive:true});fs.accessSync(valid.reportDir,fs.constants.W_OK);}if(p.aiKey)await vault.set('ai-key',p.aiKey);const s={...old,...valid,ai:{...old.ai,...valid.ai},updates:Object.hasOwn(valid,'updates')?submittedUpdateSettings(old.updates,valid.updates):(store.getSetting('settings',{}).updates||{})};store.setSetting('settings',s);return settings();}
+ case 'settings.save':{const old=settings();const valid={};for(const k of Object.keys(defaults))if(k in p)valid[k]=p[k];if(Object.hasOwn(valid,'ai'))valid.ai=submittedAISettings(old.ai,valid.ai);if(valid.reportTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(valid.reportTime))throw Error('提醒时间格式应为 09:00');if(valid.workdays&&!valid.workdays.every(x=>Number.isInteger(x)&&x>=0&&x<7))throw Error('工作日无效');if(valid.allowedProjects){valid.allowedProjects=valid.allowedProjects.map(x=>path.resolve(x));for(const d of valid.allowedProjects)if(!fs.existsSync(d)||!fs.statSync(d).isDirectory())throw Error('所选工作项目目录不存在');}if(valid.reportDir){valid.reportDir=path.resolve(valid.reportDir);fs.mkdirSync(valid.reportDir,{recursive:true});fs.accessSync(valid.reportDir,fs.constants.W_OK);}if(p.aiKey)await vault.set('ai-key',p.aiKey);const s={...old,...valid,ai:{...old.ai,...valid.ai},updates:Object.hasOwn(valid,'updates')?submittedUpdateSettings(old.updates,valid.updates):(store.getSetting('settings',{}).updates||{})};if(valid.ai&&JSON.stringify(old.ai)!==JSON.stringify(s.ai))codexAnalyzer.cancelActive?.();store.setSetting('settings',s);return settings();}
  case 'settings.chooseReportDir':{const r=await choosePath('folder');if(r.path)store.setSetting('settings',{...settings(),reportDir:r.path});return r;}
  case 'settings.chooseProject':return choosePath('folder');
  case 'settings.openReportDir':fs.mkdirSync(settings().reportDir,{recursive:true});return openPath(settings().reportDir);
@@ -149,6 +159,8 @@ async function api(method,p={}) {
  case 'wechat.disconnect':return wechat.disconnect();
  case 'wechat.test':return wechat.sendText({text:'这是个人待办事项看板的测试消息。请核对接收微信是否正确。'});
  case 'codex.status':return codex.status();
+ case 'analysis.codexStatus':return codexAnalyzer.status();
+ case 'analysis.codexTest':return codexAnalyzer.test({consent:p.consent===true});
  case 'codex.threads':return codex.listThreads();
  case 'codex.result':{const result=codex.getResult(p.threadId);if(!result)throw Error('本会话尚无已登记的完成结果，请先核对当前任务状态');return result;}
  case 'codex.interrupt':return codex.interrupt(p);
@@ -179,6 +191,7 @@ const server=http.createServer(async(req,res)=>{try{
 const startedAt=new Date().toISOString();let timer;
 server.on('error',err=>{console.error(err.code==='EADDRINUSE'?`端口 ${PORT} 已使用，请先检查已有看板，或设置 BOARD_PORT。`:'本机服务启动失败：'+err.code);if(ownsLock&&fs.existsSync(lockFile))fs.unlinkSync(lockFile);process.exit(1);});
 if(require.main===module){server.listen(PORT,HOST,()=>{console.log(`个人待办事项看板 V${VERSION} http://${HOST}:${PORT}`);fs.writeFileSync(path.join(dataDir,'service.json'),JSON.stringify({pid:process.pid,port:PORT,version:VERSION,startedAt,instanceId,previewUpdateTest}));wechat.start().catch(()=>{});timer=setInterval(()=>{store.setSetting('lastTickAt',new Date().toISOString());tick();},60000);timer.unref();});}
-function stop(){if(timer)clearInterval(timer);for(const source of store.all('sources'))sources.cancel(source.id);wechat.stop?.();codex.stop?.();server.close(()=>{store.close();if(ownsLock&&fs.existsSync(lockFile))fs.unlinkSync(lockFile);process.exit(0);});setTimeout(()=>process.exit(0),3000).unref();}
+let serviceStopping=false;
+function stop(){if(serviceStopping)return;serviceStopping=true;if(timer)clearInterval(timer);for(const source of store.all('sources'))sources.cancel(source.id);codex.stop?.();codexAnalyzer.stop?.();Promise.resolve().then(()=>wechat.stop?.()).catch(()=>{}).finally(()=>server.close(()=>{store.close();if(ownsLock&&fs.existsSync(lockFile))fs.unlinkSync(lockFile);process.exit(0);}));setTimeout(()=>process.exit(0),8000).unref();}
 process.on('SIGTERM',stop);process.on('SIGINT',stop);
 module.exports={api,server,store,settings,preview,saveReport,tick,routeWechat,outbound,VERSION,PORT,dataDir,previewUpdateTest};
