@@ -1,14 +1,16 @@
-# Codex 安装与维护约定 V1.9.0
+# Codex 安装与维护约定 V1.10.1
 
-> **V0.3.6 开发预览候选（目标为Pre-release、非正式latest）：** 增加通过本机已登录 Codex 账号提取待办。本文记录版本内容；上传、签名、部署和业务验收以实际回执为准，不能从文档推断已发布。
+> **V0.3.7 版本说明（开发预览通道）：** 本版提供页面与后台版本差异提示和未保存内容保护、每秒北京时间时钟、可选天气与一次定位、已配置来源的立即整理、默认全部状态看板，以及邮箱／钉钉配置入口；公开说明同步实际发行状态。实际公开状态、资产校验值和本版验收结果以[GitHub发行记录](https://github.com/liruiqi250-hub/personal-workboard/releases)为准。
 
-> 目标材料：`v0.3.6`、`personal-workboard-0.3.6-windows-x64.zip` 与干净源码包。安装前在[GitHub发行列表](https://github.com/liruiqi250-hub/personal-workboard/releases)核对实际存在的版本、资产和对应 SHA-256；旧程序、数据快照和旧资产保留。
+> **已发布基线：** [V0.3.6](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.6) 已作为 Pre-release 公开，非正式 latest。V0.3.6 的程序、数据回退快照、标签与发行资产保留；旧包内的候选措辞属于冻结时点的历史说明。
+
+> 本版文件名为 `personal-workboard-0.3.7-windows-x64.zip` 和 `personal-workboard-0.3.7-public-source.zip`。下载前从发行列表核对实际存在的 `v0.3.7`、文件大小、SHA-256 及预览状态；不从文件名或本文推断网络资产已经存在。
 
 > **V0.3.2 已知更新恢复缺口（UPD-RECOVERY-01）：** 被占用的子文件可能使旧程序目录只移动一部分，旧回退记录会漏记该目录。V0.3.2 仍为已发布的 Pre-release、非正式 latest，原冻结包保留。V0.3.3 已按开发预览发布，限定完整部署故障场景经独立复核通过；已有数据实例的首次迁移和旧失败记录恢复使用本指南的新可信外部维护入口，不能调用旧 V0.3.2 的 update.ps1 代替。详见 [V0.3.2 发行说明](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2)。
 
-目标公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2此前按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。V0.3.3此前按Pre-release发布、非正式 latest，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3 。V0.3.6准备以v0.3.6标签发布，实际状态请核对GitHub发行列表。本文件不授权发布。
+公开仓库：https://github.com/liruiqi250-hub/personal-workboard 。[v0.3.1](https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.1) 已按开发预览发布，属于 Pre-release、非正式 latest；V0.3.2此前按开发预览发布，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.2 ，仍非正式 latest。V0.3.3此前按Pre-release发布、非正式 latest，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.3 。V0.3.6 已作为 Pre-release 公开，发行页为 https://github.com/liruiqi250-hub/personal-workboard/releases/tag/v0.3.6 。V0.3.7 的实际发行状态以对应 GitHub 记录为准。Git 操作和发布遵从当前人类用户授权，本文件本身不额外授权发布。
 
-当前代码为 V0.3.6 开发预览，既有V0.3.3及更早发行保留。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
+本文件对应 V0.3.7 开发预览代码，既有 V0.3.6、V0.3.3 及更早发行保留。离线协议、签名元数据或部署测试不代表真实微信、邮箱、钉钉、跨日发送或真人界面验收通过。
 
 所有用户沟通使用中文。软件每次变更都递增版本号，更新 CHANGELOG，保留可回退的上一程序及对应数据快照。UI 改动优先使用已安装的 Impeccable 技能，复用现有 Ant Design 组件，运行实际页面并检查中文、布局、溢出、主要状态与 Impeccable 检测结果。
 
@@ -23,7 +25,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy.ps1 -Do
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\diagnose.ps1
 ```
 
-源码 checkout 使用不带 `-SkipInstall` 的部署命令。`npm ci` → `npm run build` → `node server/main.cjs` 是基础流程；交付脚本将最后一步隐藏到后台。缺 Node 时只从 nodejs.org HTTPS 下载并校验 SHA-256，运行时只放 `vendor/node`，不能擅改系统 PATH。双击启动通过 Windows 默认外部浏览器打开页面；自动验证不要切换到 Codex 内置浏览器。先检查实际连接的 Edge/Chrome；外部扩展不可用时使用 HTTP/CLI 完成可完成的检查并如实说明截图验证缺失。
+源码 checkout 使用不带 `-SkipInstall` 的部署命令。`npm ci` → `npm run build` → `node server/main.cjs` 是基础流程；交付脚本将最后一步隐藏到后台。缺 Node 时只从 nodejs.org HTTPS 下载并校验 SHA-256，运行时只放 `vendor/node`，不能擅改系统 PATH。双击启动通过 Windows 默认浏览器打开页面。按用户2026-10-27最新要求，Codex网页操作与界面验证优先使用内置浏览器；先检查当前连接和任务可见状态，遇到实际问题先排查并记录结果。历史原生问题不能当作当前不可用的证据，也不能因面板打开成功就宣称历史缺陷已修复。
 
 ## 重复运行与安全停服
 
@@ -49,7 +51,7 @@ V0.3.2 起默认 `sourceMode=project-default`，使用 `public/update-trust.json
 
 维护者签名只使用显式 `node scripts/sign-update.cjs init/public/sign`。默认私钥封套在项目外 `%LOCALAPPDATA%\PersonalWorkboardPublisher\liruiqi250-hub\personal-workboard`，受当前 Windows 用户 DPAPI 保护；禁止把封套、明文私钥或凭据纳入源码、部署包、日志或诊断。轮换需经已可信版本带入新公钥，错过过渡版本使用可信安装流程，不从未验证网络内容自动替换信任。发布和资产上传由维护者统一协调。
 
-V0.3.2 的首次安全迁移要从独立、可信的V0.3.6完整工具目录执行 `maintenance.ps1 -Action Update -ProgramDir <旧程序> -DataDir <原数据> -Port <原端口> -PackagePath <新Windows ZIP> -ExpectedSha256 <可信SHA> -ExpectedVersion 0.3.6`。不能调用旧 V0.3.2 的 update.ps1 后声称已经使用新恢复机制。旧包、原数据和备份均保留。
+V0.3.2 的首次安全迁移要从独立、可信的V0.3.7完整工具目录执行 `maintenance.ps1 -Action Update -ProgramDir <旧程序> -DataDir <原数据> -Port <原端口> -PackagePath <新Windows ZIP> -ExpectedSha256 <可信SHA> -ExpectedVersion 0.3.7`。不能调用旧 V0.3.2 的 update.ps1 后声称已经使用新恢复机制。旧包、原数据和备份均保留。
 
 旧 needs-rollback 用新工具的 `-Action RecoverLegacy -PreviousDir <旧记录目录>`，ZIP 必须是当时失败的目标包，可信 SHA 同时与旧 metadata.packageSha256 相符。恢复依据是旧完整 manifest，组合 source/saved 原件而非旧 moved 成功列表；未知修改、缺失、路径或绑定冲突明确拒绝并保留现场。成功导入后若恢复中断，使用回执中新 schema2 previousDir 的 `-Action Rollback` 重试，不能重新导入后覆盖首次回退前快照。
 
@@ -67,12 +69,52 @@ Codex 只登记本组件创建的会话。重启活动态待核对，不重发�
 
 微信上传和消息接受分别记录，结果未知不自动重发；人工核对后只重试未接受部分。旧审批通知不可重试。凭据、CDN 下载参数和加密 key 不得进入前端或公开诊断。上游微信读取被强制终止时清理不能保证完成，按上游功能核对敏感临时缓存，不递归删除猜测的用户目录。
 
-## V0.3.6 已验与待验
+## 验证证据与边界
 
-本次V0.3.6已完成279项自动测试和生产构建；本机已登录Codex的固定合成示例实际返回严格待办JSON，无真实来源读取、任务创建或微信发送。Chrome合成桌面/窄屏设置交互及Impeccable检测通过。真实来源分析、Codex遥控编程、实际定时/跨日及完整正式自动更新仍待分别验收。新装和原位升级结果以本次部署回执为准。V0.3.5历史基线已完成255项自动测试和限定本机维护/普通停启。本人确认一轮菜单/连接测试及手动日报收到，程序已读回执仍未知，旧failed/unknown账本保留。列标题/数字的Chrome检查仅使用明确标记的合成示例，不代表真实主数据页面或完整新手向导。实际定时和跨日、文件、工作来源、Codex遥控编程及完整正式自动更新仍未验收。
+V0.3.7 的自动测试、实际浏览器交互、Windows 新装、源码安装和原位升级分别记录。发行说明应列出当次实际完成的项目、未通过项和未覆盖范围；本文件不预填测试数量、资产 hash 或通过结论。后台版本检测与未保存内容保护必须经过实际旧页面跨后台版本变化的隔离验证，不能用 health 成功替代。
 
-## Codex 任务分析（V0.3.6）
+已发布 V0.3.6 的历史证据为：279 项自动测试及生产构建通过；已登录 Codex 的固定合成示例取得严格任务 JSON 和完整成功轮次；Chrome 合成设置页的桌面、窄屏交互及 Impeccable 检测通过。Windows 隔离新装 17 项、源码隔离安装 7 项是 HTTP／CLI 部署验证，不包含实际浏览器目视或真人验收；主实例原位升级与普通停启另有核验。上述结果不自动覆盖 V0.3.7。
+
+本版已记录两项独立的真实技术验证：MET Norway 对北京公开城市中心样例返回可用预报，没有读取浏览器或本人位置、没有改用户设置；官方钉钉 Windows 原生 DWS V1.0.65 已下载并核验，版本与只读命令帮助兼容，Apache-2.0 的 LICENSE／NOTICE 已保留。尚未选择本人的组织身份，未执行实际身份登录态探测、登录或群消息拉取。这些技术结果不等于本人天气定位、企业授权、来源接入或本版完整界面验收。
+
+历史本人微信菜单、连接测试与一次手动日报已确认收到，接口已读仍未知，旧 failed／unknown 账本保留。真实来源分析、Codex 遥控编程、文件往返、实际定时与跨日，以及完整正式自动更新仍待分别验收。完整维护故障矩阵属于 V0.3.3 的限定历史证据。
+
+## Codex 任务分析（自 V0.3.6 提供）
 
 在“我的设置 → 任务分析方式”选择“Codex 分析（使用本机已登录账号）”。先检测连接，勾选同意将已选来源的消息文字发送到 Codex 服务，再用固定示例测试分析，最后保存。需要安装兼容的 Codex CLI 并由本人登录；不需要填写 API 地址或密钥。分析不更改微信遥控开关，不接管已有 Codex 会话。默认仍为本机规则，升级不会自动切换分析方式。
 
 该模式不是本机离线模型。分析在独立临时目录运行，跳过用户配置及规则，禁用命令、插件、MCP、浏览器和图片等能力，使用 CLI 内建默认模型及已保存登录授权；不继承日常编程的自定义模型或工具配置。不支持受限调用参数的旧 CLI 显示需更新，不回退到放宽权限的调用。失败、取消、超时或格式不合格的消息保留待重试，不自动提交 coding 任务或发送微信。
+
+
+## 后台版本变化与页面刷新（V0.3.7）
+
+页面加载的客户端版本与后台运行版本分别核对。V0.3.7 页面通过只读健康检查检测后台升级或回退；发现版本不一致时给出提示，由本人主动刷新，不自动重载页面或重新读取并覆盖表单。检测失败不能当作已有新版本，也不能自动安装软件。
+
+有未保存内容时，先继续编辑并保存，再使用刷新入口。刷新确认应明确提示未保存内容，取消后继续保留当前输入。保护只针对当前页面内存，不等于自动保存或可跨页面恢复草稿；密码、密钥和其他表单内容不写入浏览器持久存储。浏览器关闭或手动刷新前仍应保存需要保留的内容。
+
+**已在 V0.3.6 或更早版本打开的标签，需要本人先保存，再手动刷新一次，才能加载 V0.3.7 的检测逻辑。** 已加载的旧 JavaScript 不能通过替换后台文件自动获得新功能；维护人员不要擅自刷新用户的旧设置页。之后仍保持用户主动刷新与未保存内容保护。
+
+
+## V0.3.7 新增使用入口
+
+- **北京时间时钟**：顶部显示完整年月日、星期和时分秒，每秒更新，按 Asia/Shanghai 显示；它使用电脑当前时间，不替代操作系统校时。
+- **天气与位置**：天气默认关闭，联网条款同意默认未勾选。打开顶部天气设置，本人阅读条款并同意后，可启用天气；首次默认采用一次浏览器精确定位方式，权限仍由本人按浏览器正常流程选择。拒绝、失败或超时均可改选城市／区县。只保存最后选择的位置，不持续定位、不保存轨迹。
+- **立即整理**：在任务页启动本轮整理，仅使用已启用来源及其已保存的范围、凭据和授权配置，复用原有同步与去重流程，不扩大到未选账号、群或文件夹。逐来源展示等待、正在整理、成功、跳过或失败及实际数量；可请求取消，已入库记录保留。整轮结束不等于每个来源都成功，要逐项核对。此入口不生成日报，也不发送微信。
+- **默认看板**：首页进入全部状态的看板，包含已完成列；今天要做仍保留日期范围，全部任务页可核对更完整的任务集合。
+- **邮箱与钉钉**：从“我的设置 → 消息来源配置”进入同一份来源表单；不在设置页另存一套账号。一条邮箱来源只读取一个邮件文件夹，保存范围与实际读取一致，SSL/TLS 固定开启。钉钉表单提供本机工具检测、官方工具准备和程序路径填入入口，准备工具不等于企业已授权。
+
+天气的城市／区县名称使用随程序提供的 GeoNames 中国地名索引在本机搜索，共 5,722 条，来源日期为 2026-10-27；索引包含筛选后的省市区县等候选地名，不代表最新行政边界或全国全覆盖，重名时请核对省市。搜索文字不发送给第三方。开启天气后，仅把选定经纬度作为位置参数发送至固定 HTTPS 的 MET Norway 接口，坐标最多保留四位小数；请求带程序标识，并按接口缓存规则复用预报。天气显示为数值预报，不是气象站现场实测；失败或使用旧缓存会显示对应状态和时间。
+
+[MET Norway](https://www.met.no/) 预报和 [GeoNames](https://www.geonames.org/) 地名数据均按 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 归因。GeoNames 原始 CN.zip 来源、下载日期、筛选说明和索引 SHA-256 保存在随包的 `public/china-places-meta.json`，数据在 `public/china-places.json`。
+
+## 新增功能维护边界
+
+天气配置默认 `enabled:false`、`consent:false`、`location:null`。不得代替本人接受浏览器定位权限或天气条款，不在测试中调用本人位置；技术验证只可使用明确标记的公开位置样例。天气接口只接受受控坐标，不能让表单传入任意 URL；城市／区县搜索始终使用本机 GeoNames 索引。缓存的预报与实测、当前请求与历史回执分别报告。
+
+“立即整理”复用已有来源同步。空配置、缺凭据、未授权或范围无效的来源保留跳过／失败原因，不把整轮 completed 当作所有来源接入成功；取消和服务中断后核对已入库记录，不自动重放整轮，不顺带发送日报或微信。首页全部状态默认不会改变任务完成依据。
+
+钉钉官方工具准备只做已固定 V1.0.65 原生包／EXE 的大小和 SHA-256 核对以及版本、命令帮助兼容检查，安装在 `%LOCALAPPDATA%\PersonalWorkboardTools\dingtalk\v1.0.65-windows-amd64`，位于程序和数据库目录之外。本人未选定 `corpId:userId` 前不得探测默认组织身份；企业授权、稳定 cid 范围和首次读取起点由本人确认。完整准备与账号范围步骤见安装指南，程序不代替登录。
+
+## 阿里企业邮默认配置
+
+新建邮箱来源默认预填 `imap.qiye.aliyun.com`、端口 `993`、SSL/TLS 和单一文件夹 `INBOX`；已保存配置保留，其他邮箱可手动修改服务器。本人填写完整邮箱地址与三方客户端安全密码，管理员需已允许第三方客户端和 IMAP。密码不回填、不进入浏览器持久存储。参见[阿里邮箱官方服务器说明](https://help.aliyun.com/zh/document_detail/36576.html)与[三方客户端安全密码](https://help.aliyun.com/zh/document_detail/444269.html)。默认参数不代表账号已经接入，不代为登录或读取邮件。

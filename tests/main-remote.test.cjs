@@ -22,6 +22,23 @@ function fixture(t,extraEnv={}){
  load();t.after(()=>app.store.close());
  return {dir,data,project,calls,adapter,credential,get app(){return app;},get options(){return options;},get analysisCancels(){return analysisCancels;},async configure(){await app.api('settings.save',{wechatRemoteEnabled:true,allowedProjects:[project],reportDir:path.join(dir,'reports')});},reopen(){app.store.close();load();}};
 }
+
+test('过期会话在读取业务前明确拒绝且health无缓存，更新令牌后只保存一张合成任务',async t=>{
+ const f=fixture(t);const server=f.app.server;
+ await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
+ t.after(()=>new Promise(resolve=>server.close(resolve)));
+ const base='http://127.0.0.1:'+server.address().port;
+ const request=(route,options={})=>new Promise((resolve,reject)=>{
+  const req=require('node:http').request(base+route,{agent:false,method:options.method||'GET',headers:{Host:'127.0.0.1:1',Connection:'close',...options.headers}},res=>{const parts=[];res.on('data',chunk=>parts.push(chunk));res.on('end',()=>resolve({status:res.statusCode,headers:{get:name=>res.headers[name]},json:async()=>JSON.parse(Buffer.concat(parts).toString('utf8'))}));});req.on('error',reject);req.end(options.body);
+ });
+ const health=await request('/health');assert.equal(health.status,200);assert.equal(health.headers.get('cache-control'),'no-store');assert.equal((await health.json()).version,require('../package.json').version);
+ const invalid=await request('/api/call',{method:'POST',headers:{'Content-Type':'application/json','X-Board-Token':'expired'},body:JSON.stringify({method:'task.create',payload:{title:'合成重启前草稿'}})});
+ assert.equal(invalid.status,403);assert.equal((await invalid.json()).errorCode,'SESSION_EXPIRED');assert.equal(f.app.store.all('tasks').length,0);
+ const session=await request('/api/session');assert.equal(session.headers.get('cache-control'),'no-store');const token=(await session.json()).token;
+ const saved=await request('/api/call',{method:'POST',headers:{'Content-Type':'application/json','X-Board-Token':token},body:JSON.stringify({method:'task.create',payload:{title:'合成重启前草稿'}})});
+ assert.equal(saved.status,200);assert.equal((await saved.json()).ok,true);assert.equal(f.app.store.all('tasks').length,1);
+ const denied=await request('/api/call',{method:'POST',headers:{Origin:'https://example.invalid','X-Board-Token':'expired'},body:'{}'});assert.equal(denied.status,403);assert.equal((await denied.json()).errorCode,undefined);
+});
 test('主路由从持久最近受管会话停止和明确续接，不依赖进程变量',async t=>{const f=fixture(t);await f.configure();await f.app.routeWechat('/codex 合成任务','request-1');f.reopen();await f.app.routeWechat('/停止','stop-1');await f.app.routeWechat('/继续 最近 补充要求','resume-1');assert.equal(f.calls.find(c=>c.type==='interrupt').input.threadId,'t-1');assert.equal(f.calls.find(c=>c.type==='resume').input.threadId,'t-1');});
 test('主程序完成回调保存完整长文并通过登记文件链路回传',async t=>{const f=fixture(t);await f.configure();fs.writeFileSync(path.join(f.project,'产出.txt'),'本轮合成文件');const text='完整工作结果😀'.repeat(1700);f.adapter.result={threadId:'t-1',turnId:'turn-1',cwd:f.project,status:'completed',text,artifacts:[{path:'产出.txt',kind:'add',source:'fileChange',status:'completed'}]};await f.options.onOutput({type:'completed',threadId:'t-1',turnId:'turn-1'});assert.equal(f.app.store.getSetting('lastCodexResult').text,text);const sent=f.calls.filter(c=>c.type==='text');assert(sent.length>2);assert.equal(sent.map(c=>c.text.replace(/^\[\d+\/\d+\]\n/,'')).join(''),text);const files=f.calls.filter(c=>c.type==='file');assert.equal(files.length,2);assert(files.some(c=>c.bytes.toString()===text));assert(files.some(c=>c.filename==='产出.txt'));assert.equal(f.app.outbound.list().transfers.filter(x=>x.status==='accepted').length,3);});
 test('真实报告API重登记不能绕过首次hash',async t=>{const f=fixture(t);await f.configure();const report=await f.app.api('report.export',{format:'html',type:'daily'});fs.appendFileSync(report.path,'篡改');await assert.rejects(f.app.api('report.sendFile',{id:report.id}),/内容或位置已改变/);assert.equal(f.calls.length,0);});
@@ -31,6 +48,22 @@ test('main默认可信公钥无需粘贴，设置重启保留显式custom并可�
 test('main读取遗留坏custom不崩溃不抹值，更新检查在联网前受控拒绝',async t=>{const f=fixture(t);f.app.store.setSetting('settings',{updates:{owner:'legacy-owner',repo:'legacy-board',publicKey:'legacy-invalid-key'}});f.reopen();const settings=f.app.settings();assert.equal(settings.updates.sourceMode,'custom');assert.equal(settings.updates.publicKey,'legacy-invalid-key');assert(settings.updates.configurationError);const b=await f.app.api('bootstrap');assert.equal(b.settings.updates.publicKey,'legacy-invalid-key');await assert.rejects(f.app.api('update.check'),/自定义更新来源配置无效/);await f.app.api('settings.save',{name:'仍可修改与更新无关的设置'});assert.equal(f.app.settings().updates.publicKey,'legacy-invalid-key');});
 test('main只在显式独立数据目录和非默认端口开放预览安装测试',async t=>{const isolatedLocal=fs.mkdtempSync(path.join(os.tmpdir(),'workboard-test-local-'));const f=fixture(t,{LOCALAPPDATA:isolatedLocal,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18338'});assert.equal(f.app.previewUpdateTest,true);assert.equal((await f.app.api('bootstrap')).update.allowPreviewInstall,true);assert.throws(()=>fixture(t,{LOCALAPPDATA:isolatedLocal,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18327'}),/独立数据目录和非18327/);const defaultPath=path.join(isolatedLocal,'PersonalWorkboard');assert.throws(()=>fixture(t,{LOCALAPPDATA:isolatedLocal,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18338',BOARD_DATA_DIR:defaultPath}),/独立数据目录和非18327/);});
 test('main预览测试不接受默认数据目录的联接别名',t=>{const base=fs.mkdtempSync(path.join(os.tmpdir(),'workboard-preview-alias-'));const standard=path.join(base,'PersonalWorkboard');fs.mkdirSync(standard);const alias=path.join(base,'alias');try{fs.symlinkSync(standard,alias,process.platform==='win32'?'junction':'dir');}catch{return t.skip('当前平台不允许创建隔离测试链接');}assert.throws(()=>fixture(t,{LOCALAPPDATA:base,BOARD_PREVIEW_UPDATE_TEST:'1',BOARD_PORT:'18338',BOARD_DATA_DIR:alias}),/独立数据目录和非18327/);});
+
+test('邮箱单一文件夹和TLS在后端也强制，空范围不会自动扩大',async t=>{
+ const f=fixture(t);const input={platform:'email',name:'合成邮箱',enabled:true,scope:['INBOX'],config:{host:'imap.example.invalid',user:'synthetic@example.invalid',mailbox:'INBOX',secure:true},password:'synthetic-only'};
+ const saved=await f.app.api('source.save',input);assert.equal(saved.config.secure,true);assert.equal(saved.scope[0],saved.config.mailbox);
+ await assert.rejects(f.app.api('source.save',{...input,scope:['INBOX','Other']}),/只能读取一个文件夹/);
+ await assert.rejects(f.app.api('source.save',{...input,config:{...input.config,secure:false}}),/SSL\/TLS/);
+ await assert.rejects(f.app.api('source.save',{...input,scope:['Other']}),/范围必须/);
+ const blank=await f.app.api('source.save',{platform:'email',name:'未接入合成',enabled:true,scope:[],config:{}});assert.equal(blank.scope.length,0);
+});
+
+test('天气启用需本人明确同意，设置只保存最后位置；立即整理空来源不触发发送',async t=>{
+ const f=fixture(t);assert.equal(f.app.settings().weather.enabled,false);assert.equal((await f.app.api('weather.current')).status,'disabled');
+ await assert.rejects(f.app.api('settings.save',{weather:{enabled:true,consent:false}}),/先同意/);
+ const settings=await f.app.api('settings.save',{weather:{enabled:true,consent:true,autoLocate:true,location:{name:'合成公开位置',lat:39.9000123,lon:116.4000456,mode:'geolocation'}}});assert.equal(settings.weather.location.lat,39.9);assert.equal(settings.weather.location.lon,116.4);
+ const job=await f.app.api('intake.start');assert.equal(job.status,'completed');assert.equal(job.results.length,0);assert.equal((await f.app.api('intake.status')).id,job.id);assert.equal(f.calls.length,0);
+});
 
 test('Codex 分析设置默认关闭，启用需严格同意，切换保留原服务配置和密钥',async t=>{
  const f=fixture(t);assert.equal(f.app.settings().ai.mode,'rules');assert.equal(f.app.settings().ai.codexConsent,false);

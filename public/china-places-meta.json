@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "name": "GeoNames 中国城市和区县天气位置索引",
+  "provider": "GeoNames",
+  "source": "https://download.geonames.org/export/dump/CN.zip",
+  "readme": "https://download.geonames.org/export/dump/readme.txt",
+  "providerUrl": "https://www.geonames.org/",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "downloadedAt": "2026-10-27T05:40:11.636Z",
+  "sourceLastModified": "Tue, 27 Oct 2026 02:45:05 GMT",
+  "sourceArchiveSha256": "c03cde716fdeec410ea056e7d98bb53c6dc7a33e7432c38b0ede0c66cc716a27",
+  "sourceArchiveBytes": 32236271,
+  "sourceTextSha256": "843ac87510ccc07d3c19c5312d4f90ebe781cfdab208a84b034d90d8ef302e61",
+  "datasetFile": "china-places.json",
+  "datasetSha256": "8d709e04e3c9438aa7bf337578a69e8fec148d91b2d2b67e08bc50a622b0d4b4",
+  "datasetBytes": 1004617,
+  "count": 5722,
+  "selection": "CN：ADM1、ADM2、ADM3 和 PPLC、PPLA、PPLA2、PPLA3，包含中文别名；中心点保留最多四位小数",
+  "changes": "从国家原始数据筛选与整理，仅供天气位置查找，不代表最新行政边界；可能存在缺失、旧名或重名。",
+  "localSearch": true
+}

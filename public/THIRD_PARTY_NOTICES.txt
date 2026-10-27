@@ -7,7 +7,7 @@ Node 运行时与后端依赖的既有原始许可证继续随其目录提供。
 已知的 Vite 与 Rolldown 注入运行时按实际输出虚拟模块归属其包；未输出的构建工具不列入依赖数量。
 未知且有输出的虚拟模块会阻止构建，不能无声跳过许可归属。
 
-前端依赖数量：48
+前端依赖数量：49
 机器可验证清单：third-party-licenses/manifest.json
 
 实际输出的第三方虚拟运行时：
@@ -236,6 +236,18 @@ Node 运行时与后端依赖的既有原始许可证继续随其目录提供。
   原件来源：node_modules/@rc-component/portal/LICENSE
   来源类型：installed-package-original
   SHA-256：8781f0ca192057330d7fbab763f8bcd3c8e671032f98e9cf1f8c82d6748e5654
+
+@rc-component/progress@1.0.3
+包清单原件：node_modules/@rc-component/progress/package.json
+包声明许可：MIT
+  随包完整原件：third-party-licenses/_rc-component_progress-1.0.3-08550b632633-1.txt
+  原件来源：node_modules/@rc-component/progress/LICENSE
+  来源类型：installed-package-original
+  SHA-256：53eb8e75d95517110e08f54e1c4007e2204f2de512cca6ca0ac2f9aeb4e6e0f8
+  随包完整原件：third-party-licenses/_rc-component_progress-1.0.3-08550b632633-2.txt
+  原件来源：node_modules/@rc-component/progress/LICENSE.md
+  来源类型：installed-package-original
+  SHA-256：5d0427088e37071c4b942de990f6365d5c2d195f3e957ce925322d184784e2eb
 
 @rc-component/resize-observer@1.1.2
 包清单原件：node_modules/@rc-component/resize-observer/package.json

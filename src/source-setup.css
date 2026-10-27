@@ -1,0 +1,16 @@
+.source-shortcut-row { display: flex; align-items: center; gap: 16px; padding: 20px 0; border-top: 1px solid var(--line); }
+.source-shortcut-icon { flex: 0 0 24px; color: var(--brand); font-size: 22px; }
+.source-shortcut-copy { min-width: 0; flex: 1; }
+.source-shortcut-copy h3 { margin: 0 0 8px; font-size: 16px; }
+.source-shortcut-copy p { max-width: 72ch; margin: 6px 0 10px; overflow-wrap: anywhere; }
+.source-shortcut-copy .muted { font-size: 13px; margin-bottom: 0; }
+.source-setup-steps { margin: 0 0 20px; padding-left: 22px; color: var(--muted); line-height: 1.9; }
+.source-tool-panel { margin: 16px 0 22px; }
+.source-tool-panel p { max-width: 72ch; overflow-wrap: anywhere; }
+.source-tool-path { margin: 12px 0; padding: 10px 12px; background: #f5f7f8; border-radius: 8px; overflow-wrap: anywhere; font-size: 13px; }
+.intake-summary { margin-bottom: 24px; }
+.intake-summary .section-heading { margin-bottom: 14px; }
+.intake-result-list { margin-top: 12px; }
+.intake-result-row { padding: 14px 0; border-top: 1px solid var(--line); }
+.intake-result-row p { margin: 7px 0 0; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .source-shortcut-row { align-items: flex-start; flex-wrap: wrap; gap: 12px; }.source-shortcut-copy { flex-basis: calc(100% - 40px); }.source-shortcut-row > .ant-btn { margin-left: 36px; }.intake-summary .section-heading { flex-wrap: wrap; } }

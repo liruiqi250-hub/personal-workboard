@@ -1,0 +1,25 @@
+.clock-weather { flex: 1 1 480px; min-width: 0; }
+.full-clock { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; color: var(--text, #172b32); font-size: 22px; font-weight: 650; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.full-clock-time { white-space: nowrap; }
+.weather-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; margin-top: 3px; }
+.weather-entry.ant-btn { height: auto; min-height: 32px; padding-inline: 0 5px; color: var(--primary, #167d82); max-width: 100%; }
+.weather-entry-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weather-summary-meta { font-size: 13px; color: var(--muted, #536971); }
+.topbar:has(.clock-weather) { min-height: 98px; height: auto; padding-block: 12px; flex-wrap: wrap; }
+.topbar:has(.clock-weather) > .ant-space { flex-shrink: 0; margin-inline-start: auto; }
+.weather-settings-modal .ant-alert-description p { margin: 5px 0 0; }
+.weather-settings-modal.ant-modal .ant-collapse { margin-inline: 0; }
+.weather-consent { margin-block: 18px; }
+.weather-location-method p { margin-top: 10px; }
+.weather-search { width: 100%; }
+.weather-search > .ant-input { min-width: 0; }
+.weather-coordinate-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.weather-coordinate-fields .ant-input-number { width: 100%; }
+.weather-selected { background: #f2f7f6; padding: 14px 16px; border-radius: 8px; margin-block: 16px; overflow-wrap: anywhere; }
+.weather-selected p { margin: 5px 0 0; color: var(--muted, #536971); }
+.weather-feedback { margin-top: 14px; }
+.weather-preview { border-top: 1px solid var(--line, #dfe8e9); margin-top: 22px; padding-top: 18px; }
+.weather-preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.weather-preview-heading h3 { margin: 0; font-size: 16px; }
+.weather-attribution { font-size: 13px; line-height: 1.7; color: var(--muted, #536971); margin: 20px 0 0; }
+@media (max-width: 760px) { .clock-weather { flex-basis: 100%; }.full-clock { font-size: 19px; gap: 3px 10px; }.weather-summary-meta { flex-basis: 100%; }.topbar:has(.clock-weather) > .ant-space { justify-content: flex-end; }.weather-coordinate-fields { gap: 12px; } }

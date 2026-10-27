@@ -4,6 +4,9 @@ const {buildReport,exportDocx}=require('../server/reports.cjs');const {WechatCli
 const {createManagedCodexStore}=require('./managed-codex-store.cjs');const {createOutbound}=require('./outbound.cjs');
 const {validateWechatCredential}=require('./collectors.cjs');
 const {createCodexAnalyzer}=require('./codex-analyzer.cjs');
+const {createIntake}=require('./intake.cjs');
+const {createDingtalkRuntime}=require('./dingtalk-runtime.cjs');
+const {createWeather,normalizeWeatherSettings,DEFAULT_WEATHER}=require('./weather.cjs');
 const {resolveUpdateSettings,normalizeUpdateSettings}=require('./update-trust.cjs');
 const pkg=require('../package.json');const VERSION=pkg.version;const PORT=Number(process.env.BOARD_PORT)||18327;const HOST='127.0.0.1';
 const dataDir=path.resolve(process.env.BOARD_DATA_DIR||path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),'PersonalWorkboard'));
@@ -22,8 +25,8 @@ if(require.main===module){
 }
 const reportDefault=path.join(dataDir,'报告');const store=createStore(dataDir);const vault=createVault(dataDir);const token=crypto.randomBytes(32).toString('hex');
 for(const d of store.all('deliveries'))if(d.status==='sending')store.put('deliveries',{...d,status:'unknown',message:'上次服务在发送中退出，结果未知，请核对手机后再决定是否重试'});
-const defaults={name:'',aliases:[],reportDir:reportDefault,reportTime:'17:30',workdays:[1,2,3,4,5],dailyEnabled:false,wechatRemoteEnabled:false,onboardingStep:0,onboardingComplete:false,autoLaunch:false,ai:{mode:'rules',baseUrl:'',model:'',codexConsent:false},updates:{owner:'liruiqi250-hub',repo:'personal-workboard',publicKey:''},allowedProjects:[]};
-function settings(){const saved=store.getSetting('settings',{});return {...defaults,...saved,ai:{...defaults.ai,...saved.ai},updates:resolveUpdateSettings(saved.updates||{})};}
+const defaults={name:'',aliases:[],reportDir:reportDefault,reportTime:'17:30',workdays:[1,2,3,4,5],dailyEnabled:false,wechatRemoteEnabled:false,onboardingStep:0,onboardingComplete:false,autoLaunch:false,weather:DEFAULT_WEATHER,ai:{mode:'rules',baseUrl:'',model:'',codexConsent:false},updates:{owner:'liruiqi250-hub',repo:'personal-workboard',publicKey:''},allowedProjects:[]};
+function settings(){const saved=store.getSetting('settings',{});return {...defaults,...saved,weather:{...DEFAULT_WEATHER,...saved.weather},ai:{...defaults.ai,...saved.ai},updates:resolveUpdateSettings(saved.updates||{})};}
 function submittedUpdateSettings(previous,input){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('更新来源设置格式不正确');
  const merged={...previous,...input};
@@ -63,11 +66,15 @@ const wechat=new WechatClient({vault,getSettings:settings,onStatus:s=>{store.set
 const outbound=createOutbound({store,wechat,getSettings:settings,dataDir});
 const codexAnalyzer=createCodexAnalyzer();
 const sources=createSources({store,vault,getSettings:settings,codexAnalyzer});
+const intake=createIntake({store,sources,vault});
+const dingtalkRuntime=createDingtalkRuntime({localAppData:process.env.LOCALAPPDATA});
+const weather=createWeather({getSettings:settings});
 async function saveSource(input){
  if(input.wechatKeys!==undefined&&typeof input.wechatKeys!=='string')throw Error('离线逐库密钥应为 JSON 文本，请勿放入来源配置');
  const id=input.id||crypto.randomUUID();const old=store.get('sources',id)||{};const platform=input.platform||old.platform;
  if(!['wechat','email','dingtalk','manual'].includes(platform))throw Error('来源类型无效');
  const source={...old,id,platform,name:String(input.name||old.name||'我的来源').slice(0,100),enabled:!!input.enabled,scope:Array.isArray(input.scope)?input.scope.map(String):[],config:{...old.config,...input.config},status:old.status||'configured'};
+ if(platform==='email'){if(source.config.secure===false)throw Error('邮箱来源必须启用SSL/TLS');if(source.scope.length>1)throw Error('一条邮箱来源只能读取一个文件夹，请分别创建来源');const mailbox=String(source.config.mailbox||source.config.folder||source.scope[0]||'INBOX').trim();if(!mailbox||mailbox.length>200)throw Error('请填写一个有效邮箱文件夹');if(source.scope.length===1&&source.scope[0]!==mailbox)throw Error('邮箱读取范围必须与该来源的单一文件夹一致');source.config={...source.config,secure:true,mailbox};source.scope=source.scope.length?[mailbox]:[];}
  const credentialChanged=!!input.password||typeof input.wechatKeys==='string'&&!!input.wechatKeys.trim();
  const changed=!old.id||credentialChanged||JSON.stringify([old.platform,old.scope,old.config])!==JSON.stringify([source.platform,source.scope,source.config]);
  if(changed||!source.enabled)sources.cancel(id);
@@ -128,13 +135,20 @@ async function api(method,p={}) {
  case 'task.patch':return store.patchTask(p.id,p);
  case 'task.delete':return store.deleted(p.id);
  case 'task.restore':return store.deleted(p.id,true);
- case 'settings.save':{const old=settings();const valid={};for(const k of Object.keys(defaults))if(k in p)valid[k]=p[k];if(Object.hasOwn(valid,'ai'))valid.ai=submittedAISettings(old.ai,valid.ai);if(valid.reportTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(valid.reportTime))throw Error('提醒时间格式应为 09:00');if(valid.workdays&&!valid.workdays.every(x=>Number.isInteger(x)&&x>=0&&x<7))throw Error('工作日无效');if(valid.allowedProjects){valid.allowedProjects=valid.allowedProjects.map(x=>path.resolve(x));for(const d of valid.allowedProjects)if(!fs.existsSync(d)||!fs.statSync(d).isDirectory())throw Error('所选工作项目目录不存在');}if(valid.reportDir){valid.reportDir=path.resolve(valid.reportDir);fs.mkdirSync(valid.reportDir,{recursive:true});fs.accessSync(valid.reportDir,fs.constants.W_OK);}if(p.aiKey)await vault.set('ai-key',p.aiKey);const s={...old,...valid,ai:{...old.ai,...valid.ai},updates:Object.hasOwn(valid,'updates')?submittedUpdateSettings(old.updates,valid.updates):(store.getSetting('settings',{}).updates||{})};if(valid.ai&&JSON.stringify(old.ai)!==JSON.stringify(s.ai))codexAnalyzer.cancelActive?.();store.setSetting('settings',s);return settings();}
+ case 'settings.save':{const old=settings();const valid={};for(const k of Object.keys(defaults))if(k in p)valid[k]=p[k];if(Object.hasOwn(valid,'ai'))valid.ai=submittedAISettings(old.ai,valid.ai);if(Object.hasOwn(valid,'weather'))valid.weather=normalizeWeatherSettings(old.weather,valid.weather);if(valid.reportTime&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(valid.reportTime))throw Error('提醒时间格式应为 09:00');if(valid.workdays&&!valid.workdays.every(x=>Number.isInteger(x)&&x>=0&&x<7))throw Error('工作日无效');if(valid.allowedProjects){valid.allowedProjects=valid.allowedProjects.map(x=>path.resolve(x));for(const d of valid.allowedProjects)if(!fs.existsSync(d)||!fs.statSync(d).isDirectory())throw Error('所选工作项目目录不存在');}if(valid.reportDir){valid.reportDir=path.resolve(valid.reportDir);fs.mkdirSync(valid.reportDir,{recursive:true});fs.accessSync(valid.reportDir,fs.constants.W_OK);}if(p.aiKey)await vault.set('ai-key',p.aiKey);const s={...old,...valid,ai:{...old.ai,...valid.ai},updates:Object.hasOwn(valid,'updates')?submittedUpdateSettings(old.updates,valid.updates):(store.getSetting('settings',{}).updates||{})};if(valid.ai&&JSON.stringify(old.ai)!==JSON.stringify(s.ai))codexAnalyzer.cancelActive?.();if(valid.weather&&JSON.stringify(old.weather)!==JSON.stringify(s.weather))weather.cancelActive();store.setSetting('settings',s);return settings();}
  case 'settings.chooseReportDir':{const r=await choosePath('folder');if(r.path)store.setSetting('settings',{...settings(),reportDir:r.path});return r;}
  case 'settings.chooseProject':return choosePath('folder');
  case 'settings.openReportDir':fs.mkdirSync(settings().reportDir,{recursive:true});return openPath(settings().reportDir);
  case 'app.openDataDir':return openPath(dataDir);
  case 'source.save':return saveSource(p);
  case 'source.remove':sources.cancel(p.id);store.db.prepare('DELETE FROM sources WHERE id=?').run(p.id);await vault.delete('source:'+p.id);await vault.delete('source-wechat:'+p.id);return {removed:true};
+ case 'intake.start':return intake.start();
+ case 'intake.status':return intake.status();
+ case 'intake.cancel':return intake.cancel();
+ case 'weather.current':return weather.current();
+ case 'weather.search':return weather.search({query:p.query});
+ case 'runtime.dingtalkStatus':return dingtalkRuntime.status();
+ case 'runtime.dingtalkPrepare':return dingtalkRuntime.prepare();
  case 'source.cancel':return {cancelled:sources.cancel(p.id),message:'已请求取消本轮采集；已经入库的消息保留，检查点仅在完整成功后前移'};
  case 'source.probeCollectors':return sources.probeCollectors();
  case 'source.test':return sources.test(p.id);
@@ -182,7 +196,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(!trusted(req))return json(res,403,{ok:false,error:'只允许本机同源访问'});const url=new URL(req.url,`http://${HOST}:${PORT}`);
  if(url.pathname==='/health')return json(res,200,{ok:true,version:VERSION,service:'personal-workboard',host:HOST,startedAt,instanceId,apiVersion:1,previewUpdateTest});
  if(url.pathname==='/api/session'&&req.method==='GET')return json(res,200,{token});
- if(url.pathname==='/api/call'&&req.method==='POST'){if(req.headers['x-board-token']!==token)return json(res,403,{ok:false,error:'本机请求验证失败'});const parts=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>22*1024*1024)return json(res,413,{ok:false,error:'内容过大，请分批导入'});parts.push(chunk);}let input;try{input=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{return json(res,400,{ok:false,error:'请求格式错误'});}try{return json(res,200,{ok:true,data:await api(input.method,input.payload||{})});}catch(e){return json(res,200,{ok:false,error:e.message});}}
+ if(url.pathname==='/api/call'&&req.method==='POST'){if(req.headers['x-board-token']!==token)return json(res,403,{ok:false,error:'本机请求验证失败',errorCode:'SESSION_EXPIRED'});const parts=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>22*1024*1024)return json(res,413,{ok:false,error:'内容过大，请分批导入'});parts.push(chunk);}let input;try{input=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{return json(res,400,{ok:false,error:'请求格式错误'});}try{return json(res,200,{ok:true,data:await api(input.method,input.payload||{})});}catch(e){return json(res,200,{ok:false,error:e.message});}}
  if(url.pathname.startsWith('/api/report/')&&url.pathname.endsWith('/download')){const id=url.pathname.split('/')[3];const r=store.get('reports',id);if(!r||!fs.existsSync(r.path))return json(res,404,{ok:false,error:'报告文件不存在，请重新导出'});res.writeHead(200,{'Content-Type':r.format==='pdf'?'application/pdf':r.format==='docx'?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'text/html; charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(r.fileName)}`,'Cache-Control':'no-store'});return fs.createReadStream(r.path).pipe(res);}
  if(req.method!=='GET')return json(res,405,{ok:false,error:'不支持的请求'});
  const root=path.resolve(__dirname,'../dist');let target=path.resolve(root,'.'+decodeURIComponent(url.pathname));if(!target.startsWith(root+path.sep)&&target!==root)return json(res,403,{ok:false,error:'路径不允许'});if(!path.extname(target)||!fs.existsSync(target))target=path.join(root,'index.html');if(!fs.existsSync(target))return json(res,503,{ok:false,error:'界面尚未构建，请执行部署脚本'});
@@ -192,6 +206,6 @@ const startedAt=new Date().toISOString();let timer;
 server.on('error',err=>{console.error(err.code==='EADDRINUSE'?`端口 ${PORT} 已使用，请先检查已有看板，或设置 BOARD_PORT。`:'本机服务启动失败：'+err.code);if(ownsLock&&fs.existsSync(lockFile))fs.unlinkSync(lockFile);process.exit(1);});
 if(require.main===module){server.listen(PORT,HOST,()=>{console.log(`个人待办事项看板 V${VERSION} http://${HOST}:${PORT}`);fs.writeFileSync(path.join(dataDir,'service.json'),JSON.stringify({pid:process.pid,port:PORT,version:VERSION,startedAt,instanceId,previewUpdateTest}));wechat.start().catch(()=>{});timer=setInterval(()=>{store.setSetting('lastTickAt',new Date().toISOString());tick();},60000);timer.unref();});}
 let serviceStopping=false;
-function stop(){if(serviceStopping)return;serviceStopping=true;if(timer)clearInterval(timer);for(const source of store.all('sources'))sources.cancel(source.id);codex.stop?.();codexAnalyzer.stop?.();Promise.resolve().then(()=>wechat.stop?.()).catch(()=>{}).finally(()=>server.close(()=>{store.close();if(ownsLock&&fs.existsSync(lockFile))fs.unlinkSync(lockFile);process.exit(0);}));setTimeout(()=>process.exit(0),8000).unref();}
+function stop(){if(serviceStopping)return;serviceStopping=true;if(timer)clearInterval(timer);intake.stop();weather.stop();for(const source of store.all('sources'))sources.cancel(source.id);codex.stop?.();codexAnalyzer.stop?.();Promise.resolve().then(()=>wechat.stop?.()).catch(()=>{}).finally(()=>server.close(()=>{store.close();if(ownsLock&&fs.existsSync(lockFile))fs.unlinkSync(lockFile);process.exit(0);}));setTimeout(()=>process.exit(0),8000).unref();}
 process.on('SIGTERM',stop);process.on('SIGINT',stop);
 module.exports={api,server,store,settings,preview,saveReport,tick,routeWechat,outbound,VERSION,PORT,dataDir,previewUpdateTest};

@@ -33,6 +33,11 @@ p { line-height: 1.75; }
 .page-heading p, .section-heading p { color: var(--muted); margin: 0; }
 .page-heading > .ant-btn { flex-shrink: 0; }
 .top-alert { margin-bottom: 20px; }
+.client-update-notice { align-items: flex-start; }
+.client-update-notice .ant-alert-content { min-width: 0; }
+.client-update-notice .ant-alert-description p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.client-update-notice .ant-alert-actions { align-self: center; }
+@media (max-width: 760px) { .client-update-notice { flex-wrap: wrap; row-gap: 12px; }.client-update-notice .ant-alert-actions { flex-basis: 100%; margin-inline-start: 0; } }
 .content-panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 26px 28px; margin-bottom: 24px; }
 .section-heading { display: flex; gap: 20px; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .section-heading p { font-size: 14px; }
